@@ -1,0 +1,42 @@
+{# Hero carousel: 4 placeholder slides. Replace bg-* placeholder divs with <img> tags once real assets exist. #}
+<section class="relative">
+    <div id="hero-carousel" class="relative w-full h-48 sm:h-64 md:h-80 lg:h-96 overflow-hidden bg-gray-200">
+
+        <div id="hero-track" class="flex h-full transition-transform duration-700 ease-in-out">
+            <div class="hero-slide w-full h-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-blue-200 to-blue-400">
+                <span class="text-white/80 font-semibold text-sm sm:text-base">Slide 1 placeholder</span>
+            </div>
+            <div class="hero-slide w-full h-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-indigo-200 to-indigo-400">
+                <span class="text-white/80 font-semibold text-sm sm:text-base">Slide 2 placeholder</span>
+            </div>
+            <div class="hero-slide w-full h-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-sky-200 to-sky-400">
+                <span class="text-white/80 font-semibold text-sm sm:text-base">Slide 3 placeholder</span>
+            </div>
+            <div class="hero-slide w-full h-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-cyan-200 to-cyan-400">
+                <span class="text-white/80 font-semibold text-sm sm:text-base">Slide 4 placeholder</span>
+            </div>
+        </div>
+
+        <!-- Prev / Next arrows -->
+        <button id="hero-prev" type="button" aria-label="Previous slide"
+                class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white rounded-full p-2 shadow">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+        </button>
+        <button id="hero-next" type="button" aria-label="Next slide"
+                class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white rounded-full p-2 shadow">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+        </button>
+
+        <!-- Dots -->
+        <div id="hero-dots" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
+            <button class="hero-dot h-2.5 w-2.5 rounded-full bg-white/60" data-index="0" aria-label="Go to slide 1"></button>
+            <button class="hero-dot h-2.5 w-2.5 rounded-full bg-white/60" data-index="1" aria-label="Go to slide 2"></button>
+            <button class="hero-dot h-2.5 w-2.5 rounded-full bg-white/60" data-index="2" aria-label="Go to slide 3"></button>
+            <button class="hero-dot h-2.5 w-2.5 rounded-full bg-white/60" data-index="3" aria-label="Go to slide 4"></button>
+        </div>
+    </div>
+</section>

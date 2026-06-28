@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+{% include "partials/hero_carousel.html" %}
+
+<!-- Quick Actions -->
+<section class="max-w-5xl mx-auto px-4 mt-8 relative z-10">
+    <div class="text-center mb-4">
+        {% include "partials/section_heading.html" with text="Quick Actions" %}
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+        <a href="{% url 'grievances' %}"
+           class="bg-white border border-gray-200 shadow rounded-lg py-2.5 px-2 text-center text-xs sm:text-sm font-semibold text-brand-blue
+                  hover:bg-brand-blue hover:text-white transition-colors">
+            Submit a Grievance
+        </a>
+        <a href="{% url 'grievances' %}"
+           class="bg-white border border-gray-200 shadow rounded-lg py-2.5 px-2 text-center text-xs sm:text-sm font-semibold text-brand-blue
+                  hover:bg-brand-blue hover:text-white transition-colors">
+            Track a Grievance
+        </a>
+        <a href="{% url 'notices' %}"
+           class="bg-white border border-gray-200 shadow rounded-lg py-2.5 px-2 text-center text-xs sm:text-sm font-semibold text-brand-blue
+                  hover:bg-brand-blue hover:text-white transition-colors">
+            View Notices
+        </a>
+    </div>
+</section>
+
+<!-- Latest Notices & Job Listings -->
+<section class="bg-blue-50 mt-10">
+    <div class="max-w-5xl mx-auto px-4 py-10 grid grid-cols-1 lg:grid-cols-2 gap-10">
+
+        <div>
+            <div class="mb-4">
+                {% include "partials/section_heading.html" with text="Latest Notices" %}
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {% for notice in notices %}
+                    {% include "partials/notice_card.html" with notice=notice %}
+                {% empty %}
+                    <p class="text-sm text-gray-500">No notices published yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div>
+            <div class="mb-4">
+                {% include "partials/section_heading.html" with text="Job Listings" %}
+            </div>
+            <!-- Scrollable job list: fixed max height, scrolls internally once there are more than ~3 jobs -->
+            <div class="space-y-3 max-h-80 overflow-y-auto pr-1">
+                {% for job in jobs %}
+                    {% include "partials/job_card.html" with job=job %}
+                {% empty %}
+                    <p class="text-sm text-gray-500">No open positions right now.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Statistics -->
+<section class="max-w-5xl mx-auto px-4 py-12">
+    <div class="text-center mb-8">
+        {% include "partials/section_heading.html" with text="Statistics" %}
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+        <div>
+            <p class="text-brand-blue font-semibold">Complaints</p>
+            <p class="text-2xl font-bold">{{ stats.complaints }}</p>
+        </div>
+        <div>
+            <p class="text-brand-blue font-semibold">Resolved</p>
+            <p class="text-2xl font-bold">{{ stats.resolved }}</p>
+        </div>
+        <div>
+            <p class="text-brand-blue font-semibold">Active Jobs</p>
+            <p class="text-2xl font-bold">{{ stats.active_jobs }}</p>
+        </div>
+        <div>
+            <p class="text-brand-blue font-semibold">Notices</p>
+            <p class="text-2xl font-bold">{{ stats.notices }}</p>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

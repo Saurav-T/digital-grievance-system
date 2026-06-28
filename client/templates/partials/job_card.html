@@ -1,0 +1,12 @@
+{% load static %}
+{# Usage: {% include "partials/job_card.html" with job=job %} #}
+<div class="bg-blue-100 rounded-lg p-4 flex gap-3 items-start">
+    <img src="{% static 'img/emblem.png' %}" alt=""
+         class="h-10 w-10 rounded-full object-cover flex-shrink-0 bg-white">
+    <div>
+        <p class="text-sm font-bold text-gray-800">{{ job.title }}</p>
+        <p class="text-xs text-gray-600">{{ job.organization }}</p>
+        <p class="text-xs text-gray-600">{{ job.location }}</p>
+        <p class="text-xs text-gray-600">Deadline: {{ job.deadline }}</p>
+    </div>
+</div>

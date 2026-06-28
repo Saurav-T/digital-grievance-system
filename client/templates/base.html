@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Digital Grievance and Notice Board System{% endblock %}</title>
+
+    <!-- Tailwind via CDN (swap for a build pipeline in production) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-blue': '#1e3a8a',
+                        'brand-blue-dark': '#172a63',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+
+    {% include "partials/sidebar.html" %}
+
+    <!-- Overlay shown behind the sidebar when it's open -->
+    <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/50 z-40"></div>
+
+    {% include "partials/header.html" %}
+
+    <main class="flex-grow">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% include "partials/footer.html" %}
+
+    <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

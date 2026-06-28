@@ -1,0 +1,9 @@
+{% comment %}
+Usage:
+  {% include "partials/section_heading.html" with text="Statistics" %}
+Wrap the include in a `text-center` parent div if you want it centered -
+the heading itself stays inline-block so the red underline only spans the text width.
+{% endcomment %}
+<h2 class="inline-block text-brand-blue font-semibold text-lg pb-1 border-b-2 border-red-500">
+    {{ text }}
+</h2>

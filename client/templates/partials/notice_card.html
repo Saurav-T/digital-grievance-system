@@ -1,0 +1,5 @@
+{# Usage: {% include "partials/notice_card.html" with notice=notice %} #}
+<div class="bg-white sm:bg-transparent border-l-4 border-brand-blue pl-3 py-1">
+    <p class="text-sm font-medium text-gray-800 leading-snug">{{ notice.title }}</p>
+    <p class="text-xs text-gray-500 mt-2">{{ notice.posted_at }}</p>
+</div>

@@ -1,0 +1,33 @@
+/* Marquee notice animation */
+.marquee-wrapper {
+    width: 100%;
+}
+
+.marquee-track {
+    animation: marquee-scroll 25s linear infinite;
+}
+
+.marquee-wrapper:hover .marquee-track {
+    animation-play-state: paused;
+}
+
+@keyframes marquee-scroll {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+/* Sidebar open state */
+#sidebar.sidebar-open {
+    transform: translateX(0);
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .marquee-track {
+        animation: none;
+    }
+}

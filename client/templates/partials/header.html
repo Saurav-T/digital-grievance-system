@@ -1,0 +1,67 @@
+{% load static %}
+<header class="relative z-30">
+
+    <!-- Top bar: logo, title, language selector, hamburger -->
+    <div class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-5 sm:py-6 flex items-center justify-between gap-3">
+
+            <div class="flex items-center gap-3">
+                <img src="{% static 'img/emblem.png' %}" alt="Government of Nepal Emblem"
+                     class="h-12 w-12 object-contain">
+                <div class="leading-tight">
+                    <p class="text-xs text-gray-500">Government Of Nepal</p>
+                    <p class="text-xs text-gray-500">Ministry of Home Affairs</p>
+                    <p class="text-sm sm:text-base font-bold text-brand-blue">
+                        Digital Grievance and Notice Board System
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <select class="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue">
+                    <option>Eng</option>
+                    <option>नेप</option>
+                </select>
+
+                <!-- Hamburger / Close toggle: stays in the same spot, swaps icon based on sidebar state -->
+                <button id="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false"
+                        class="relative p-2 rounded bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-blue">
+                    <svg id="icon-hamburger" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand-blue" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    <svg id="icon-close" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand-blue hidden" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Marquee notice strip: populated from a pool of notices, shuffled on each page load -->
+    <div class="bg-brand-blue text-white text-sm overflow-hidden">
+        <div class="max-w-7xl mx-auto flex items-center">
+            <span class="bg-brand-blue-dark px-3 py-2 font-semibold shrink-0 whitespace-nowrap">Notice</span>
+            <div class="marquee-wrapper flex-1 overflow-hidden py-2">
+                <div id="marquee-track" class="marquee-track flex gap-12 whitespace-nowrap">
+                    <!-- populated by main.js from window.MARQUEE_NOTICES -->
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<script>
+    // Pool of notices the marquee randomly samples from on each load.
+    // Swap this for a real {{ notices }} context list once the Notice model exists.
+    window.MARQUEE_NOTICES = [
+        "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
+        "अनलाइन उजुरी दर्ता प्रणाली सञ्चालन सम्बन्धी सूचना",
+        "कम्प्युटर अपरेटर पदको दरखास्त आह्वान सम्बन्धी सूचना",
+        "गुनासो सुनुवाई कार्यक्रम तालिका प्रकाशन सम्बन्धी सूचना",
+        "सार्वजनिक बिदाका दिन सेवा उपलब्ध नहुने सम्बन्धी सूचना",
+        "वेबसाइट अनुसूची अपडेट सम्बन्धी सूचना",
+        "नतिजा प्रकाशन सम्बन्धी जरुरी सूचना"
+    ];
+</script>
