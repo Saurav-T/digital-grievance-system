@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+{% extends "client/base.html" %}
 
 {% block title %}{{ page_title }} | Digital Grievance and Notice Board System{% endblock %}
 
 {% block content %}
 <section class="max-w-3xl mx-auto px-4 py-20 text-center">
     <div class="inline-block mb-6">
-        {% include "partials/section_heading.html" with text=page_title %}
+        {% include "client/partials/section_heading.html" with text=page_title %}
     </div>
     <p class="text-gray-500">
         {{ page_description|default:"This page is a placeholder — the real content will be wired up here." }}

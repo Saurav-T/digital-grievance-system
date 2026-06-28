@@ -42,7 +42,7 @@ def home(request):
         "jobs": jobs,
         "stats": stats,
     }
-    return render(request, "home.html", context)
+    return render(request, "client/home.html", context)
 
 
 def placeholder_page(request, page_title, page_description=""):

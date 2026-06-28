@@ -21,25 +21,25 @@
         }
     </script>
 
-    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    <link rel="stylesheet" href="{% static 'client/css/custom.css' %}">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
 
-    {% include "partials/sidebar.html" %}
+    {% include "client/partials/sidebar.html" %}
 
     <!-- Overlay shown behind the sidebar when it's open -->
     <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/50 z-40"></div>
 
-    {% include "partials/header.html" %}
+    {% include "client/partials/header.html" %}
 
     <main class="flex-grow">
         {% block content %}{% endblock %}
     </main>
 
-    {% include "partials/footer.html" %}
+    {% include "client/partials/footer.html" %}
 
-    <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'client/js/main.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
