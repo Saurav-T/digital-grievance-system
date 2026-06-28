@@ -1,0 +1,174 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block title %}Admin Panel | Digital Grievance and Notice Board System{% endblock %}
+    </title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              "brand-blue": "#1e3a8a",
+              "brand-blue-dark": "#172a63",
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="{% static 'server/css/admin.css' %}" />
+  </head>
+  <body class="bg-gray-50 text-gray-800 min-h-screen">
+    <!-- Mobile top bar with hamburger -->
+    <div
+      class="lg:hidden flex items-center justify-between bg-white border-b px-4 py-3 sticky top-0 z-30"
+    >
+      <button
+        id="admin-sidebar-toggle"
+        type="button"
+        aria-label="Toggle sidebar"
+        class="p-2 rounded bg-gray-100 hover:bg-gray-200"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-6 w-6 text-brand-blue"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M4 6h16M4 12h16M4 18h16"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Overlay for mobile sidebar -->
+    <div
+      id="admin-sidebar-overlay"
+      class="hidden fixed inset-0 bg-black/50 z-40 lg:hidden"
+    ></div>
+
+    <div class="flex h-full">
+      <!-- Permanent (desktop) / slide-over (mobile) admin sidebar -->
+     <aside
+    id="admin-sidebar"
+    class="fixed inset-y-0 left-0 w-64 bg-brand-blue text-white z-50
+           flex flex-col justify-between
+           transform -translate-x-full lg:translate-x-0
+           transition-transform duration-300 ease-in-out">
+        <div class="lg:hidden flex justify-end p-4">
+          <button
+            id="admin-sidebar-close"
+            class="rounded p-2 hover:bg-white/10"
+            aria-label="Close sidebar"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div>
+          <div class="px-6 py-8 text-center">
+            <h1 class="text-xl font-bold">Admin Panel</h1>
+          </div>
+
+          <nav class="px-6">
+            <ul class="space-y-1 text-sm">
+              <li>
+                <a
+                  href="{% url 'admin_panel:dashboard' %}"
+                  class="block py-2.5 border-b border-white/20 font-semibold hover:text-blue-200 {% if active == 'dashboard' %}text-blue-200{% endif %}"
+                >
+                  Dashboard
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{% url 'admin_panel:users' %}"
+                  class="block py-2.5 border-b border-white/20 font-semibold hover:text-blue-200 {% if active == 'users' %}text-blue-200{% endif %}"
+                >
+                  Users
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{% url 'admin_panel:grievances' %}"
+                  class="block py-2.5 border-b border-white/20 font-semibold hover:text-blue-200 {% if active == 'grievances' %}text-blue-200{% endif %}"
+                >
+                  Grievances
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{% url 'admin_panel:notices' %}"
+                  class="block py-2.5 border-b border-white/20 font-semibold hover:text-blue-200 {% if active == 'notices' %}text-blue-200{% endif %}"
+                >
+                  Notices
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{% url 'admin_panel:jobs' %}"
+                  class="block py-2.5 border-b border-white/20 font-semibold hover:text-blue-200 {% if active == 'jobs' %}text-blue-200{% endif %}"
+                >
+                  Jobs
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+
+        <div class="px-6 pb-8">
+          <button
+            type="button"
+            class="w-full bg-white/10 hover:bg-white/20 rounded py-2.5 text-sm font-semibold mb-6"
+          >
+            Logout
+          </button>
+          <div class="flex items-center gap-3">
+            <img
+              src="{% static 'server/img/emblem.png' %}"
+              alt="Emblem"
+              class="h-10 w-10 object-contain"
+            />
+            <div class="text-xs text-blue-100 leading-tight">
+              <p>Government Of Nepal</p>
+              <p>Ministry of Home Affairs</p>
+              <p class="font-semibold text-white">
+                Digital Grievance and Notice Board System
+              </p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main content -->
+      <div class="flex-1 min-w-0 lg:ml-64">
+        <div class="p-4 sm:p-8">{% block content %}{% endblock %}</div>
+      </div>
+    </div>
+
+    <script src="{% static 'server/js/admin_sidebar.js' %}"></script>
+  </body>
+</html>
