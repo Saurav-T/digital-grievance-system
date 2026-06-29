@@ -1,0 +1,196 @@
+{% extends "client/base.html" %}
+{% load static %}
+
+{% block title %}Job Listings – Digital Grievance and Notice Board System{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Search bar ── */
+  .search-wrapper input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #1e3a8a;
+  }
+
+  /* ── Job card hover lift ── */
+  .job-card {
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .job-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(30, 58, 138, 0.13);
+  }
+
+  /* ── Filter dropdown ── */
+  #filter-dropdown {
+    display: none;
+  }
+  #filter-dropdown.open {
+    display: block;
+  }
+
+  /* ── Page header label ── */
+  .page-label {
+    display: inline-block;
+    border-bottom: 2px solid #1e3a8a;
+    color: #1e3a8a;
+    font-weight: 700;
+    font-size: 1.05rem;
+    padding-bottom: 2px;
+    letter-spacing: 0.01em;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- ── Page heading ── -->
+  <div class="mb-6">
+    <span class="page-label">Job Listings</span>
+  </div>
+
+  <!-- ── Search + Filter bar ── -->
+  <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
+    <!-- Search -->
+    <div class="search-wrapper flex flex-1 rounded overflow-hidden border border-gray-300 bg-white shadow-sm">
+      <input
+        id="job-search"
+        type="text"
+        placeholder="Search"
+        class="flex-1 px-4 py-2.5 text-sm text-gray-700 bg-white"
+      />
+      <button
+        class="bg-brand-blue hover:bg-brand-blue-dark text-white px-6 py-2.5 text-sm font-semibold transition-colors"
+      >
+        Search
+      </button>
+    </div>
+
+    <!-- Filter -->
+    <div class="relative self-end sm:self-auto">
+      <button
+        id="filter-btn"
+        class="flex items-center gap-2 border border-gray-300 bg-white rounded px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
+      >
+        Filter
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      <!-- Dropdown panel -->
+      <div id="filter-dropdown" class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-10 p-3 space-y-2 text-sm text-gray-700">
+        <p class="font-semibold text-gray-800 mb-1">Filter by</p>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" class="accent-brand-blue"> Ministry of Education
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" class="accent-brand-blue"> Kathmandu
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" class="accent-brand-blue"> Deadline: This Month
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" class="accent-brand-blue"> Computer Operator
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Job cards grid ── -->
+  <div
+    id="job-grid"
+    class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+  >
+    {% comment %}
+      Replace this static block with a Django loop:
+        {% for job in jobs %}
+          … render each card dynamically …
+        {% empty %}
+          <p class="col-span-2 text-center text-gray-500 py-16">No job listings found.</p>
+        {% endfor %}
+    {% endcomment %}
+
+    {% for i in "12345678" %}
+    <a
+      href="#"
+      class="job-card flex items-center gap-4 bg-blue-100 hover:bg-blue-200 rounded-lg p-4 cursor-pointer"
+      data-title="Computer Operator"
+      data-org="Ministry of Education"
+    >
+      <!-- Logo -->
+      <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20">
+        <img
+          src="{% static 'client/img/emblem.png' %}"
+          alt="Ministry of Education logo"
+          class="w-full h-full object-contain"
+          onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Emblem_of_Nepal.svg/120px-Emblem_of_Nepal.svg.png';"
+        />
+      </div>
+
+      <!-- Details -->
+      <div class="min-w-0">
+        <p class="font-bold text-gray-900 text-sm sm:text-base leading-snug">Computer Operator</p>
+        <p class="text-gray-700 text-xs sm:text-sm mt-0.5">Ministry of Education</p>
+        <p class="text-gray-600 text-xs sm:text-sm">Kathmandu, Nepal</p>
+        <p class="text-gray-600 text-xs sm:text-sm">
+          Deadline:
+          <span class="{% if forloop.last %}font-medium text-red-600{% else %}font-medium text-gray-800{% endif %}">
+            {% if forloop.last %}30th July, 2028{% else %}30th July, 2026{% endif %}
+          </span>
+        </p>
+      </div>
+    </a>
+    {% endfor %}
+
+  </div>
+
+  <!-- ── Empty state (shown via JS when search yields nothing) ── -->
+  <div id="empty-state" class="hidden text-center py-20 text-gray-500">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <p class="text-lg font-medium">No jobs match your search.</p>
+    <p class="text-sm mt-1">Try different keywords or clear the filter.</p>
+  </div>
+
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // ── Filter dropdown toggle ──
+  const filterBtn = document.getElementById('filter-btn');
+  const filterDropdown = document.getElementById('filter-dropdown');
+
+  filterBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    filterDropdown.classList.toggle('open');
+  });
+  document.addEventListener('click', () => filterDropdown.classList.remove('open'));
+
+  // ── Live search ──
+  const searchInput = document.getElementById('job-search');
+  const cards       = document.querySelectorAll('#job-grid .job-card');
+  const emptyState  = document.getElementById('empty-state');
+
+  function filterJobs() {
+    const q = searchInput.value.toLowerCase().trim();
+    let visible = 0;
+
+    cards.forEach(card => {
+      const title = (card.dataset.title || '').toLowerCase();
+      const org   = (card.dataset.org  || '').toLowerCase();
+      const match = !q || title.includes(q) || org.includes(q);
+      card.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+
+    emptyState.classList.toggle('hidden', visible > 0);
+  }
+
+  searchInput.addEventListener('input', filterJobs);
+
+  // Trigger on the Search button too
+  document.querySelector('.search-wrapper button').addEventListener('click', filterJobs);
+</script>
+{% endblock %}
