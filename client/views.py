@@ -68,10 +68,7 @@ def grievances(request):
 
 
 def job_listings(request):
-    return placeholder_page(
-        request, "Job Listings",
-        "The complete, filterable job board will live here."
-    )
+    return render(request, "client/job_listings.html")
 
 
 def about(request):
