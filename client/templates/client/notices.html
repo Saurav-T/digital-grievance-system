@@ -5,12 +5,6 @@
 
 {% block extra_head %}
 <style>
-  /* ── Search bar ── */
-  .search-wrapper input:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px #1e3a8a;
-  }
-
   /* ── Notice card hover lift ── */
   .notice-card {
     transition: transform 0.18s ease, box-shadow 0.18s ease;
@@ -28,16 +22,6 @@
     display: block;
   }
 
-  /* ── Page header label ── */
-  .page-label {
-    display: inline-block;
-    border-bottom: 2px solid #1e3a8a;
-    color: #1e3a8a;
-    font-weight: 700;
-    font-size: 1.05rem;
-    padding-bottom: 2px;
-    letter-spacing: 0.01em;
-  }
 </style>
 {% endblock %}
 
@@ -46,33 +30,33 @@
 
   <!-- ── Page heading ── -->
   <div class="mb-6">
-    <span class="page-label">Notices</span>
+    <span class="inline-block text-brand-blue font-semibold text-lg pb-1 border-b-2 border-red-500">Notices</span>
   </div>
 
   <!-- ── Search + Filter bar ── -->
-  <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
     <!-- Search -->
-    <div class="search-wrapper flex flex-1 rounded overflow-hidden border border-gray-300 bg-white shadow-sm">
+    <div class="search-wrapper flex items-center gap-2 w-full sm:w-auto">
       <input
         id="notice-search"
         type="text"
         placeholder="Search"
-        class="flex-1 px-4 py-2.5 text-sm text-gray-700 bg-white"
+        class="w-full sm:w-64 lg:w-72 px-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-500 border border-gray-300 rounded bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-blue"
       />
       <button
         type="button"
-        class="bg-brand-blue hover:bg-brand-blue-dark text-white px-6 py-2.5 text-sm font-semibold transition-colors"
+        class="shrink-0 bg-brand-blue hover:bg-brand-blue-dark text-white px-6 py-2.5 text-sm font-semibold rounded transition-colors"
       >
         Search
       </button>
     </div>
 
     <!-- Filter -->
-    <div class="relative self-end sm:self-auto">
+    <div class="relative self-end sm:self-auto shrink-0">
       <button
         id="notice-filter-btn"
         type="button"
-        class="flex items-center gap-2 border border-gray-300 bg-white rounded px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
+        class="flex items-center gap-2 border border-gray-300 rounded bg-gray-100 hover:bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors"
       >
         Filter
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
