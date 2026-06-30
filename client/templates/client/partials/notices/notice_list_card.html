@@ -1,0 +1,11 @@
+{# Usage: {% include "client/partials/notices/notice_list_card.html" with title=title posted_at=posted_at %} #}
+<article
+  class="notice-card bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-200 hover:shadow-lg"
+  data-title="{{ title }}"
+>
+  <div class="bg-brand-blue h-24 sm:h-28"></div>
+  <div class="p-4">
+    <p class="font-bold text-gray-900 text-sm leading-snug">{{ title }}</p>
+    <p class="text-xs text-gray-500 mt-3">{{ posted_at }}</p>
+  </div>
+</article>

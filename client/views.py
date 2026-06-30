@@ -54,10 +54,28 @@ def placeholder_page(request, page_title, page_description=""):
 
 
 def notices(request):
-    return placeholder_page(
-        request, "Notices",
-        "The full notice board — with search, filters, and pagination — will live here."
-    )
+    notices = [
+        {"title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
+         "posted_at": "June 18, 2026, 09:33 AM"},
+        {"title": "अनलाइन उजुरी दर्ता प्रणाली सञ्चालन सम्बन्धी सूचना",
+         "posted_at": "June 17, 2026, 02:15 PM"},
+        {"title": "कम्प्युटर अपरेटर पदको दरखास्त आह्वान सम्बन्धी सूचना",
+         "posted_at": "June 16, 2026, 11:00 AM"},
+        {"title": "गुनासो सुनुवाई कार्यक्रम तालिका प्रकाशन सम्बन्धी सूचना",
+         "posted_at": "June 15, 2026, 04:45 PM"},
+        {"title": "सार्वजनिक बिदाका दिन सेवा उपलब्ध नहुने सम्बन्धी सूचना",
+         "posted_at": "June 14, 2026, 10:20 AM"},
+        {"title": "वेबसाइट अनुसूची अपडेट सम्बन्धी सूचना",
+         "posted_at": "June 13, 2026, 03:30 PM"},
+        {"title": "नतिजा प्रकाशन सम्बन्धी जरुरी सूचना",
+         "posted_at": "June 12, 2026, 08:00 AM"},
+        {"title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
+         "posted_at": "June 11, 2026, 01:10 PM"},
+        {"title": "अनलाइन उजुरी दर्ता प्रणाली सञ्चालन सम्बन्धी सूचना",
+         "posted_at": "June 10, 2026, 09:55 AM"},
+    ]
+
+    return render(request, "client/notices.html", {"notices": notices})
 
 
 def grievances(request):

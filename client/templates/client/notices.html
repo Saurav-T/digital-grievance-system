@@ -1,0 +1,208 @@
+{% extends "client/base.html" %}
+{% load static %}
+
+{% block title %}Notices – Digital Grievance and Notice Board System{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Search bar ── */
+  .search-wrapper input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #1e3a8a;
+  }
+
+  /* ── Notice card hover lift ── */
+  .notice-card {
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .notice-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(30, 58, 138, 0.13);
+  }
+
+  /* ── Filter dropdown ── */
+  #notice-filter-dropdown {
+    display: none;
+  }
+  #notice-filter-dropdown.open {
+    display: block;
+  }
+
+  /* ── Page header label ── */
+  .page-label {
+    display: inline-block;
+    border-bottom: 2px solid #1e3a8a;
+    color: #1e3a8a;
+    font-weight: 700;
+    font-size: 1.05rem;
+    padding-bottom: 2px;
+    letter-spacing: 0.01em;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- ── Page heading ── -->
+  <div class="mb-6">
+    <span class="page-label">Notices</span>
+  </div>
+
+  <!-- ── Search + Filter bar ── -->
+  <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
+    <!-- Search -->
+    <div class="search-wrapper flex flex-1 rounded overflow-hidden border border-gray-300 bg-white shadow-sm">
+      <input
+        id="notice-search"
+        type="text"
+        placeholder="Search"
+        class="flex-1 px-4 py-2.5 text-sm text-gray-700 bg-white"
+      />
+      <button
+        type="button"
+        class="bg-brand-blue hover:bg-brand-blue-dark text-white px-6 py-2.5 text-sm font-semibold transition-colors"
+      >
+        Search
+      </button>
+    </div>
+
+    <!-- Filter -->
+    <div class="relative self-end sm:self-auto">
+      <button
+        id="notice-filter-btn"
+        type="button"
+        class="flex items-center gap-2 border border-gray-300 bg-white rounded px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
+      >
+        Filter
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      <!-- Dropdown panel -->
+      <div id="notice-filter-dropdown" class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-10 p-3 space-y-2 text-sm text-gray-700">
+        <p class="font-semibold text-gray-800 mb-1">Filter by</p>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" class="accent-brand-blue"> Renewal &amp; Fees
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" class="accent-brand-blue"> Recruitment
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" class="accent-brand-blue"> Public Holiday
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" class="accent-brand-blue"> This Month
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Notice cards grid ── -->
+  <div
+    id="notice-grid"
+    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+  >
+    {% comment %}
+      Replace this static block with a Django loop once views.py is wired up:
+        {% for notice in notices %}
+          {% include "client/partials/notices/notice_list_card.html" with title=notice.title posted_at=notice.posted_at %}
+        {% empty %}
+          <p class="col-span-full text-center text-gray-500 py-16">No notices published yet.</p>
+        {% endfor %}
+    {% endcomment %}
+
+    {% for i in "123456789" %}
+      {% include "client/partials/notices/notice_list_card.html" with title="नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना" posted_at="June 18, 2026, 09:33 AM" %}
+    {% endfor %}
+  </div>
+
+  <!-- ── Empty state (shown via JS when search yields nothing) ── -->
+  <div id="notice-empty-state" class="hidden text-center py-20 text-gray-500">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <p class="text-lg font-medium">No notices match your search.</p>
+    <p class="text-sm mt-1">Try different keywords or clear the filter.</p>
+  </div>
+
+  <!-- ── Pagination placeholder ── -->
+  <nav aria-label="Pagination" class="mt-10 flex items-center justify-center gap-1">
+    <button
+      type="button"
+      disabled
+      class="px-3 py-1.5 text-sm rounded border border-gray-200 text-gray-400 cursor-not-allowed"
+    >
+      Previous
+    </button>
+    <button
+      type="button"
+      class="px-3 py-1.5 text-sm rounded bg-brand-blue text-white font-semibold"
+    >
+      1
+    </button>
+    <button
+      type="button"
+      class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+    >
+      2
+    </button>
+    <button
+      type="button"
+      class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+    >
+      3
+    </button>
+    <span class="px-2 text-sm text-gray-400">…</span>
+    <button
+      type="button"
+      class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+    >
+      10
+    </button>
+    <button
+      type="button"
+      class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+    >
+      Next
+    </button>
+  </nav>
+
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // ── Filter dropdown toggle ──
+  const filterBtn = document.getElementById('notice-filter-btn');
+  const filterDropdown = document.getElementById('notice-filter-dropdown');
+
+  filterBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    filterDropdown.classList.toggle('open');
+  });
+  document.addEventListener('click', () => filterDropdown.classList.remove('open'));
+
+  // ── Live search ──
+  const searchInput = document.getElementById('notice-search');
+  const cards       = document.querySelectorAll('#notice-grid .notice-card');
+  const emptyState  = document.getElementById('notice-empty-state');
+
+  function filterNotices() {
+    const q = searchInput.value.toLowerCase().trim();
+    let visible = 0;
+
+    cards.forEach(card => {
+      const title = (card.dataset.title || '').toLowerCase();
+      const match = !q || title.includes(q);
+      card.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+
+    emptyState.classList.toggle('hidden', visible > 0);
+  }
+
+  searchInput.addEventListener('input', filterNotices);
+  document.querySelector('.search-wrapper button').addEventListener('click', filterNotices);
+</script>
+{% endblock %}
