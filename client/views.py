@@ -79,10 +79,7 @@ def notices(request):
 
 
 def grievances(request):
-    return placeholder_page(
-        request, "Grievances",
-        "The grievance submission and tracking form will live here."
-    )
+    return render(request, 'client/grievance_form.html')
 
 
 def job_listings(request):
