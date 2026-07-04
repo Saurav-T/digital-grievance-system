@@ -1,21 +1,109 @@
-/* Admin panel table niceties */
-.admin-table th {
-    text-align: left;
+/* Admin table */
+.admin-table thead th {
+    background: #f3f4f6;
+    color: #6b7280;
+    font-size: .7rem;
     font-weight: 600;
-    color: #374151;
-    background-color: #e5e7eb;
-    padding: 0.75rem 1rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: .625rem 1rem;
+    text-align: left;
+    white-space: nowrap;
 }
-
-.admin-table td {
-    padding: 0.75rem 1rem;
+.admin-table tbody tr {
     border-bottom: 1px solid #f3f4f6;
 }
+.admin-table tbody tr:hover {
+    background: #f9fafb;
+}
+.admin-table td {
+    padding: .75rem 1rem;
+    font-size: .85rem;
+    vertical-align: middle;
+}
 
-.status-badge {
+/* Status badges */
+.badge {
     display: inline-block;
-    padding: 0.15rem 0.75rem;
+    padding: .18rem .65rem;
     border-radius: 9999px;
-    font-size: 0.75rem;
+    font-size: .7rem;
     font-weight: 600;
+}
+
+/* Form inputs */
+.adm-input {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: .5rem;
+    padding: .5rem .75rem;
+    font-size: .875rem;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+}
+.adm-input:focus {
+    border-color: #1e3a8a;
+    box-shadow: 0 0 0 3px rgba(30,58,138,.12);
+}
+.adm-label {
+    display: block;
+    font-size: .8rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: .3rem;
+}
+
+/* Action buttons */
+.act-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: .22rem .6rem;
+    border-radius: .375rem;
+    font-size: .72rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    white-space: nowrap;
+}
+
+/* Modal backdrop */
+.modal-wrap {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+}
+.modal-box {
+    position: relative;
+    background: #fff;
+    border-radius: .75rem;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* Flash messages */
+.flash-msg {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .75rem 1rem;
+    border-radius: .5rem;
+    font-size: .875rem;
+    margin-bottom: .75rem;
+}
+
+/* Sidebar active link */
+.sidebar-link-active {
+    background: rgba(255,255,255,.12);
+    border-radius: .375rem;
 }
