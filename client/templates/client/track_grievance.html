@@ -1,0 +1,124 @@
+
+{% block content %}
+
+<style>
+    .container{
+        padding: 14px 50px;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .container h2{
+        color: #1d4ea5;
+    }
+    .grievances{
+        display: flex;
+        gap: 10px;
+    }
+    .grievance{
+        border-radius: 10px;
+        background-color: #ececec;
+        padding: 15px 50px;
+        text-decoration: none;
+        color: black;
+    }
+    .active{
+        background-color: #1d4ea5;
+        color: white;
+    }
+    .top{
+        display: flex;
+        justify-content: space-between;
+    }
+    .search{
+        gap: 10px;
+    }
+    .search-box{
+        padding: 10px 50px;
+        border: none;
+        background-color:  #ececec;
+        border-radius: 10px;
+    }
+    .search-btn{
+        background-color: #1d4ea5;
+        color: white;
+        padding: 10px 30px;
+        border: none;
+        border-radius: 10px;
+    }
+    .filter{
+        padding: 5px;
+        border: none;
+        background-color: #ececec;
+        color: black;
+        border-radius: 10px;
+    }
+    .track-grievance{
+        width: 100%;
+        border-collapse: collapse;
+        border: 2px solid #999;
+    }
+    .track-grievance th,
+    .track-grievance td {
+        border: 1px solid #999;
+        padding: 10px;
+        text-align: center;
+        font-size: 14px;
+    }
+    .track-grievance th{
+        background-color: #f5f5f5;
+        font-weight: bold;
+    }
+</style>
+<div class="container">
+    <h2>Grievances</h2>
+    <div class="grievances">
+        <a href="" class="grievance">
+            Issue Grievances
+        </a>
+        <a href="" class="grievance active">
+            Track Grievances
+        </a>
+    </div>
+    <div class="top">
+        <div class="search">
+            <input type="text" placeholder="Search" class="search-box">
+            <button class="search-btn">Search</button> 
+        </div>
+        <select class="filter">
+            <option>Filter</option>
+            <option>Pending</option>
+            <option>Solved</option>
+        </select>
+    </div>
+    <table class="track-grievance">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Subject</th>
+                <th>Category</th>
+                <th>Priority</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for grievance in grievances %}
+            <tr>
+                <td>{{ grievance.id }}</td>
+                <td>{{ grievance.subject }}</td>
+                <td>{{ grievance.category }}</td>
+                <td>{{ grievance.priority }}</td>
+                <td>{{ grievance.status }}</td>
+            </tr>
+                {% empty %}
+            <tr>
+                <td colspan="5" class="empty">
+                    No Grievances found.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
