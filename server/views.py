@@ -38,15 +38,13 @@ def _placeholder(request, active, page_title, page_description=""):
 
 
 def users(request):
-    return _placeholder(request, "users", "Users", "User management table — list, roles, and account actions go here.")
-
+    return render(request, "server/users.html", {"active": "users", "page_title": "Users"})
 
 def grievances(request):
-    return _placeholder(request, "grievances", "Grievances", "Full grievance management table with filters and status updates goes here.")
-
+    return render(request, "server/grievances.html", {"active": "grievances", "page_title": "Grievances"})
 
 def notices(request):
-    return _placeholder(request, "notices", "Notices", "Notice management table with create/edit/publish actions goes here.")
+    return render(request, "server/notices.html", {"active": "notices", "page_title": "Notices"})
 
 
 def jobs(request):
