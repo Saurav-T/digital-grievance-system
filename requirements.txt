@@ -1,0 +1,14 @@
+# =============================================
+# Digital Grievance & Notice Board System
+# =============================================
+
+Django==5.1.4
+# Django 6.0 is very new (as of 2026). Using 5.1.x for better stability unless you specifically need 6.0 features.
+
+# PDF & Document Generation
+reportlab==4.4.1
+python-docx==1.1.2
+docxtpl==0.16.2
+
+# Image handling (required for ImageField)
+Pillow==11.1.0
