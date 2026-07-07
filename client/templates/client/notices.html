@@ -5,169 +5,100 @@
 
 {% block extra_head %}
 <style>
-  /* ── Notice card hover lift ── */
-  .notice-card {
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
-  }
-  .notice-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(30, 58, 138, 0.13);
-  }
-
-  /* ── Filter dropdown ── */
-  #notice-filter-dropdown {
-    display: none;
-  }
-  #notice-filter-dropdown.open {
-    display: block;
-  }
-
+  .notice-card { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+  .notice-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(30,58,138,.13); }
+  #notice-filter-dropdown { display:none; }
+  #notice-filter-dropdown.open { display:block; }
 </style>
 {% endblock %}
 
 {% block content %}
 <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-  <!-- ── Page heading ── -->
   <div class="mb-6">
     <span class="inline-block text-brand-blue font-semibold text-lg pb-1 border-b-2 border-red-500">Notices</span>
   </div>
 
-  <!-- ── Search + Filter bar ── -->
+  <!-- Search + Filter -->
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
-    <!-- Search -->
     <div class="search-wrapper flex items-center gap-2 w-full sm:w-auto">
-      <input
-        id="notice-search"
-        type="text"
-        placeholder="Search"
-        class="w-full sm:w-64 lg:w-72 px-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-500 border border-gray-300 rounded bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-blue"
-      />
-      <button
-        type="button"
-        class="shrink-0 bg-brand-blue hover:bg-brand-blue-dark text-white px-6 py-2.5 text-sm font-semibold rounded transition-colors"
-      >
+      <input id="notice-search" type="text" placeholder="Search"
+             class="w-full sm:w-64 lg:w-72 px-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-500
+                    border border-gray-300 rounded bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-blue"/>
+      <button type="button"
+              class="shrink-0 bg-brand-blue hover:bg-brand-blue-dark text-white px-6 py-2.5
+                     text-sm font-semibold rounded transition-colors">
         Search
       </button>
     </div>
 
-    <!-- Filter -->
     <div class="relative self-end sm:self-auto shrink-0">
-      <button
-        id="notice-filter-btn"
-        type="button"
-        class="flex items-center gap-2 border border-gray-300 rounded bg-gray-100 hover:bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors"
-      >
+      <button id="notice-filter-btn" type="button"
+              class="flex items-center gap-2 border border-gray-300 rounded bg-gray-100
+                     hover:bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors">
         Filter
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
           <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
         </svg>
       </button>
-      <!-- Dropdown panel -->
-      <div id="notice-filter-dropdown" class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-10 p-3 space-y-2 text-sm text-gray-700">
+      <div id="notice-filter-dropdown"
+           class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-10 p-3 space-y-2 text-sm text-gray-700">
         <p class="font-semibold text-gray-800 mb-1">Filter by</p>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" class="accent-brand-blue"> Renewal &amp; Fees
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" class="accent-brand-blue"> Recruitment
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" class="accent-brand-blue"> Public Holiday
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" class="accent-brand-blue"> This Month
-        </label>
+        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue"> Renewal &amp; Fees</label>
+        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue"> Recruitment</label>
+        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue"> Public Holiday</label>
+        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue"> This Month</label>
       </div>
     </div>
   </div>
 
-  <!-- ── Notice cards grid ── -->
-  <div
-    id="notice-grid"
-    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
-  >
+  <!-- Notice cards grid -->
+  <div id="notice-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
     {% comment %}
-      Replace this static block with a Django loop once views.py is wired up:
-        {% for notice in notices %}
-          {% include "client/partials/notices/notice_list_card.html" with title=notice.title posted_at=notice.posted_at %}
-        {% empty %}
-          <p class="col-span-full text-center text-gray-500 py-16">No notices published yet.</p>
-        {% endfor %}
-    {% endcomment %}
+    ── DB integration: replace the static loop below with ──────────────────────
+    {% for notice in notices %}
+      {% include "client/partials/notices/notice_list_card.html" with title=notice.title posted_at=notice.issue_date|date:"F j, Y, g:i A" notice_id=notice.id %}
+    {% empty %}
+      <p class="col-span-full text-center text-gray-500 py-16">No notices published yet.</p>
+    {% endfor %}
+    ────────────────────────────────────────────────────────────────────────── {% endcomment %}
 
     {% for i in "123456789" %}
-      {% include "client/partials/notices/notice_list_card.html" with title="नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना" posted_at="June 18, 2026, 09:33 AM" %}
+      {% include "client/partials/notices/notice_list_card.html" with title="नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना" posted_at="June 18, 2026, 09:33 AM" notice_id=forloop.counter %}
     {% endfor %}
   </div>
 
-  <!-- ── Empty state (shown via JS when search yields nothing) ── -->
   <div id="notice-empty-state" class="hidden text-center py-20 text-gray-500">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300" fill="none"
+         viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
     </svg>
     <p class="text-lg font-medium">No notices match your search.</p>
     <p class="text-sm mt-1">Try different keywords or clear the filter.</p>
   </div>
 
-  <!-- ── Pagination placeholder ── -->
+  <!-- Pagination -->
   <nav aria-label="Pagination" class="mt-10 flex items-center justify-center gap-1">
-    <button
-      type="button"
-      disabled
-      class="px-3 py-1.5 text-sm rounded border border-gray-200 text-gray-400 cursor-not-allowed"
-    >
-      Previous
-    </button>
-    <button
-      type="button"
-      class="px-3 py-1.5 text-sm rounded bg-brand-blue text-white font-semibold"
-    >
-      1
-    </button>
-    <button
-      type="button"
-      class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-    >
-      2
-    </button>
-    <button
-      type="button"
-      class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-    >
-      3
-    </button>
+    <button type="button" disabled class="px-3 py-1.5 text-sm rounded border border-gray-200 text-gray-400 cursor-not-allowed">Previous</button>
+    <button type="button" class="px-3 py-1.5 text-sm rounded bg-brand-blue text-white font-semibold">1</button>
+    <button type="button" class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">2</button>
+    <button type="button" class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">3</button>
     <span class="px-2 text-sm text-gray-400">…</span>
-    <button
-      type="button"
-      class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-    >
-      10
-    </button>
-    <button
-      type="button"
-      class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-    >
-      Next
-    </button>
+    <button type="button" class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">10</button>
+    <button type="button" class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Next</button>
   </nav>
-
 </section>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  // ── Filter dropdown toggle ──
-  const filterBtn = document.getElementById('notice-filter-btn');
+  const filterBtn      = document.getElementById('notice-filter-btn');
   const filterDropdown = document.getElementById('notice-filter-dropdown');
-
-  filterBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    filterDropdown.classList.toggle('open');
-  });
+  filterBtn.addEventListener('click', e => { e.stopPropagation(); filterDropdown.classList.toggle('open'); });
   document.addEventListener('click', () => filterDropdown.classList.remove('open'));
 
-  // ── Live search ──
   const searchInput = document.getElementById('notice-search');
   const cards       = document.querySelectorAll('#notice-grid .notice-card');
   const emptyState  = document.getElementById('notice-empty-state');
@@ -175,14 +106,11 @@
   function filterNotices() {
     const q = searchInput.value.toLowerCase().trim();
     let visible = 0;
-
     cards.forEach(card => {
-      const title = (card.dataset.title || '').toLowerCase();
-      const match = !q || title.includes(q);
+      const match = !q || (card.dataset.title || '').toLowerCase().includes(q);
       card.style.display = match ? '' : 'none';
       if (match) visible++;
     });
-
     emptyState.classList.toggle('hidden', visible > 0);
   }
 
