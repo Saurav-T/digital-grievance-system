@@ -1,11 +1,38 @@
-{# Usage: {% include "client/partials/notices/notice_list_card.html" with title=title posted_at=posted_at %} #}
-<article
-  class="notice-card bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-200 hover:shadow-lg"
-  data-title="{{ title }}"
->
-  <div class="bg-brand-blue h-24 sm:h-28"></div>
-  <div class="p-4">
-    <p class="font-bold text-gray-900 text-sm leading-snug">{{ title }}</p>
-    <p class="text-xs text-gray-500 mt-3">{{ posted_at }}</p>
+{% comment %}
+Reusable notice card for the notices list page.
+
+Usage:
+  {% include "client/partials/notices/notice_list_card.html"
+     with title=notice.title posted_at=notice.posted_at notice_id=notice.id %}
+
+Before DB integration, pass a static notice_id (e.g. forloop.counter).
+After DB integration, pass notice.id from your queryset.
+{% endcomment %}
+{% load static %}
+
+<a href="{% url 'notice_detail' notice_id|default:1 %}"
+   class="notice-card block bg-white rounded-xl border border-gray-100 shadow-sm
+          overflow-hidden cursor-pointer"
+   data-title="{{ title|lower }}">
+
+  <!-- Blue image placeholder (swap for real notice image when available) -->
+  <div class="h-20 bg-brand-blue relative overflow-hidden">
+    {% comment %}
+    TODO (DB): Uncomment when Notice model has an image field:
+    {% if notice.image %}
+      <img src="{{ notice.image.url }}" alt="{{ title }}"
+           class="w-full h-full object-cover">
+    {% else %}
+      <div class="w-full h-full bg-brand-blue"></div>
+    {% endif %}
+    {% endcomment %}
   </div>
-</article>
+
+  <!-- Card body -->
+  <div class="p-4">
+    <p class="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
+      {{ title }}
+    </p>
+    <p class="text-xs text-gray-500 mt-2">{{ posted_at }}</p>
+  </div>
+</a>

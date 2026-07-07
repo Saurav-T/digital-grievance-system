@@ -1,101 +1,96 @@
 {% extends "server/base.html" %}
-
 {% block title %}Dashboard | Admin Panel{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
 
 {% block content %}
 <h1 class="text-2xl font-bold mb-6">Dashboard</h1>
 
 <!-- Stat cards -->
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <div class="bg-gray-200 rounded-lg p-4 relative">
-        <span class="absolute top-3 right-3 bg-white/70 rounded-full p-1.5">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <div class="bg-white rounded-xl p-5 shadow-sm border relative">
+        <span class="absolute top-4 right-4 bg-blue-100 rounded-full p-2">
+            <svg class="h-4 w-4 text-brand-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
         </span>
-        <p class="text-sm font-semibold text-gray-700">Total Complaints</p>
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Complaints</p>
         <p class="text-3xl font-bold mt-1">{{ stats.total_complaints }}</p>
-        {% if stats.complaints_this_month %}
-        <p class="text-xs text-gray-500 mt-1">This Month: {{ stats.complaints_this_month }}</p>
-        {% endif %}
+        <p class="text-xs text-gray-400 mt-1">This month: {{ stats.complaints_this_month }}</p>
     </div>
-
-    <div class="bg-gray-200 rounded-lg p-4 relative">
-        <span class="absolute top-3 right-3 bg-white/70 rounded-full p-1.5">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    <div class="bg-white rounded-xl p-5 shadow-sm border relative">
+        <span class="absolute top-4 right-4 bg-purple-100 rounded-full p-2">
+            <svg class="h-4 w-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
         </span>
-        <p class="text-sm font-semibold text-gray-700">Total Notices</p>
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Notices</p>
         <p class="text-3xl font-bold mt-1">{{ stats.total_notices }}</p>
     </div>
-
-    <div class="bg-gray-200 rounded-lg p-4 relative">
-        <span class="absolute top-3 right-3 bg-white/70 rounded-full p-1.5">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    <div class="bg-white rounded-xl p-5 shadow-sm border relative">
+        <span class="absolute top-4 right-4 bg-green-100 rounded-full p-2">
+            <svg class="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
             </svg>
         </span>
-        <p class="text-sm font-semibold text-gray-700">Active Users</p>
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active Users</p>
         <p class="text-3xl font-bold mt-1">{{ stats.active_users }}</p>
     </div>
-
-    <div class="bg-gray-200 rounded-lg p-4 relative">
-        <span class="absolute top-3 right-3 bg-white/70 rounded-full p-1.5">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m-4 6h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z" />
+    <div class="bg-white rounded-xl p-5 shadow-sm border relative">
+        <span class="absolute top-4 right-4 bg-orange-100 rounded-full p-2">
+            <svg class="h-4 w-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m-4 6h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z"/>
             </svg>
         </span>
-        <p class="text-sm font-semibold text-gray-700">Job Listings</p>
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active Jobs</p>
         <p class="text-3xl font-bold mt-1">{{ stats.job_listings }}</p>
     </div>
 </div>
 
-<!-- Chart placeholders -->
+<!-- Charts -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
-    <div class="bg-gray-200 rounded-xl h-64 flex items-center justify-center">
-        <span class="font-semibold text-gray-600">Chart 1 — Grievances over time</span>
+    <div class="bg-white rounded-xl p-6 shadow-sm border">
+        <h2 class="text-sm font-semibold text-gray-700 mb-4">Grievance Status Distribution</h2>
+        <div class="flex items-center justify-center" style="height:220px">
+            <canvas id="chart-status"></canvas>
+        </div>
     </div>
-    <div class="bg-gray-200 rounded-xl h-64 flex items-center justify-center">
-        <span class="font-semibold text-gray-600">Chart 2 — Notices by category</span>
+    <div class="bg-white rounded-xl p-6 shadow-sm border">
+        <h2 class="text-sm font-semibold text-gray-700 mb-4">Monthly Complaint Trend</h2>
+        <div style="height:220px">
+            <canvas id="chart-monthly"></canvas>
+        </div>
     </div>
 </div>
 
 <!-- Recent Grievances -->
-<div class="mb-10">
-    <div class="flex items-center justify-between mb-3">
-        <h2 class="font-semibold text-lg">Recent Grievances</h2>
-        <a href="{% url 'admin_panel:grievances' %}" class="text-sm text-brand-blue hover:underline">View All</a>
+<div class="bg-white rounded-xl shadow-sm border mb-8">
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+        <h2 class="font-semibold text-gray-800">Recent Grievances</h2>
+        <a href="{% url 'admin_panel:grievances' %}" class="text-xs text-brand-blue hover:underline font-medium">View All →</a>
     </div>
-    <div class="overflow-x-auto rounded-lg border">
-        <table class="w-full text-sm admin-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Date</th>
-                    <th>Subject</th>
-                    <th>Category</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white">
+    <div class="overflow-x-auto">
+        <table class="w-full admin-table">
+            <thead><tr>
+                <th>ID</th><th>Date</th><th>User</th><th>Subject</th><th>Category</th><th>Priority</th><th>Status</th>
+            </tr></thead>
+            <tbody>
                 {% for g in recent_grievances %}
                 <tr>
-                    <td>{{ g.id }}</td>
-                    <td>{{ g.date }}</td>
-                    <td>{{ g.subject }}</td>
-                    <td>{{ g.category }}</td>
-                    <td>{{ g.priority }}</td>
-                    <td>
-                        <span class="status-badge
-                            {% if g.status == 'Pending' %}bg-blue-100 text-blue-700
-                            {% elif g.status == 'Resolved' %}bg-green-100 text-green-700
-                            {% else %}bg-red-100 text-red-700{% endif %}">
-                            {{ g.status }}
-                        </span>
-                    </td>
+                    <td class="font-mono text-xs text-gray-500">#{{ g.id }}</td>
+                    <td class="whitespace-nowrap">{{ g.created_at|date:"d M Y" }}</td>
+                    <td>{{ g.user.get_full_name }}</td>
+                    <td class="max-w-xs truncate">{{ g.subject }}</td>
+                    <td>{{ g.category.name|default:"—" }}</td>
+                    <td><span class="badge {{ g.priority_colour }}">{{ g.priority }}</span></td>
+                    <td><span class="badge {{ g.status_colour }}">{{ g.status }}</span></td>
                 </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-gray-400 py-8 text-sm">No grievances yet.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -103,32 +98,84 @@
 </div>
 
 <!-- Latest Notices -->
-<div>
-    <div class="flex items-center justify-between mb-3">
-        <h2 class="font-semibold text-lg">Latest Notices</h2>
-        <a href="{% url 'admin_panel:notices' %}" class="text-sm text-brand-blue hover:underline">View All</a>
+<div class="bg-white rounded-xl shadow-sm border">
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+        <h2 class="font-semibold text-gray-800">Latest Notices</h2>
+        <a href="{% url 'admin_panel:notices' %}" class="text-xs text-brand-blue hover:underline font-medium">View All →</a>
     </div>
-    <div class="overflow-x-auto rounded-lg border">
-        <table class="w-full text-sm admin-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Date</th>
-                    <th>Title</th>
-                    <th>Category</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white">
+    <div class="overflow-x-auto">
+        <table class="w-full admin-table">
+            <thead><tr><th>ID</th><th>Issue Date</th><th>Title</th><th>Created By</th></tr></thead>
+            <tbody>
                 {% for n in latest_notices %}
                 <tr>
-                    <td>{{ n.id }}</td>
-                    <td>{{ n.date }}</td>
-                    <td>{{ n.title }}</td>
-                    <td>{{ n.category }}</td>
+                    <td class="font-mono text-xs text-gray-500">#{{ n.id }}</td>
+                    <td class="whitespace-nowrap">{{ n.issue_date|date:"d M Y" }}</td>
+                    <td class="max-w-xs truncate">{{ n.title }}</td>
+                    <td>{{ n.created_by.get_full_name|default:"—" }}</td>
                 </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-gray-400 py-8 text-sm">No notices yet.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const statusData  = {{ status_chart_data|safe }};
+const monthLabels = {{ monthly_labels|safe }};
+const monthCounts = {{ monthly_counts|safe }};
+
+// Pie chart
+new Chart(document.getElementById("chart-status"), {
+    type: "doughnut",
+    data: {
+        labels: Object.keys(statusData),
+        datasets: [{
+            data: Object.values(statusData),
+            backgroundColor: ["#3b82f6","#eab308","#22c55e","#ef4444"],
+            borderWidth: 2,
+            borderColor: "#fff",
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: "right", labels: { font: { size: 11 }, boxWidth: 12 } }
+        }
+    }
+});
+
+// Line chart
+new Chart(document.getElementById("chart-monthly"), {
+    type: "line",
+    data: {
+        labels: monthLabels,
+        datasets: [{
+            label: "Complaints",
+            data: monthCounts,
+            borderColor: "#1e3a8a",
+            backgroundColor: "rgba(30,58,138,.08)",
+            borderWidth: 2,
+            pointBackgroundColor: "#1e3a8a",
+            pointRadius: 4,
+            fill: true,
+            tension: 0.35,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+            y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } }
+        }
+    }
+});
+</script>
 {% endblock %}
