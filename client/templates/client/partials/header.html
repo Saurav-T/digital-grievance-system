@@ -18,10 +18,24 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <select class="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue">
-                    <option>Eng</option>
-                    <option>नेप</option>
-                </select>
+
+                <!-- Notification bell with empty dropdown -->
+                <div class="relative">
+                    <button id="notification-toggle" type="button" aria-label="Notifications" aria-expanded="false"
+                            class="relative p-2 rounded bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand-blue" fill="none"
+                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <span class="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
+                    </button>
+
+                    <div id="notification-dropdown"
+                         class="hidden absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg py-2">
+                        <!-- Intentionally empty; populate with notification items later -->
+                    </div>
+                </div>
 
                 <!-- Hamburger / Close toggle: stays in the same spot, swaps icon based on sidebar state -->
                 <button id="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false"
@@ -53,6 +67,28 @@
 </header>
 
 <script>
+    // Toggle the notification dropdown open/closed
+    document.addEventListener('DOMContentLoaded', function () {
+        const notifBtn = document.getElementById('notification-toggle');
+        const notifDropdown = document.getElementById('notification-dropdown');
+
+        if (notifBtn && notifDropdown) {
+            notifBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const isOpen = !notifDropdown.classList.contains('hidden');
+                notifDropdown.classList.toggle('hidden');
+                notifBtn.setAttribute('aria-expanded', String(!isOpen));
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
+                    notifDropdown.classList.add('hidden');
+                    notifBtn.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+    });
+
     // Pool of notices the marquee randomly samples from on each load.
     // Swap this for a real {{ notices }} context list once the Notice model exists.
     window.MARQUEE_NOTICES = [
