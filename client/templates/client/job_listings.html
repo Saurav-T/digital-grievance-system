@@ -1,10 +1,6 @@
 {% extends "client/base.html" %} {% load static %} {% block title %}Job Listings
 – Digital Grievance and Notice Board System{% endblock %} {% block extra_head %}
 <style>
-  .search-wrapper input:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px #1e3a8a;
-  }
   .job-card {
     transition:
       transform 0.18s ease,
@@ -33,7 +29,7 @@
 {% endblock %} {% block content %}
 <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
   <div class="mb-6">
-    <span class="page-label">Job Listings</span>
+    <span class="inline-block text-brand-blue font-semibold text-lg pb-1 border-b-2 border-red-500">Job Listing</span>
   </div>
 
   <!-- Search + Filter -->
@@ -81,31 +77,53 @@
     </button>
 
     <div
-      id="filter-dropdown"
-      class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-10 p-3 space-y-2 text-sm text-gray-700"
+  id="filter-dropdown"
+  class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-10 p-3 text-sm text-gray-700"
+>
+  <div class="flex items-center justify-between mb-3">
+    <p class="font-semibold text-gray-800">Filter by</p>
+
+    <button
+      id="filter-close-btn"
+      type="button"
+      class="text-gray-500 hover:text-red-600 transition-colors"
+      aria-label="Close filter"
     >
-      <p class="font-semibold text-gray-800 mb-1">Filter by</p>
+      <svg xmlns="http://www.w3.org/2000/svg"
+           class="h-5 w-5"
+           fill="none"
+           viewBox="0 0 24 24"
+           stroke="currentColor">
+        <path stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
 
-      <label class="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" class="accent-brand-blue">
-        Ministry of Education
-      </label>
+  <div class="space-y-2">
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" class="accent-brand-blue">
+      Ministry of Education
+    </label>
 
-      <label class="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" class="accent-brand-blue">
-        Kathmandu
-      </label>
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" class="accent-brand-blue">
+      Kathmandu
+    </label>
 
-      <label class="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" class="accent-brand-blue">
-        Deadline: This Month
-      </label>
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" class="accent-brand-blue">
+      Deadline: This Month
+    </label>
 
-      <label class="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" class="accent-brand-blue">
-        Computer Operator
-      </label>
-    </div>
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" class="accent-brand-blue">
+      Computer Operator
+    </label>
+  </div>
+</div>
   </div>
 </div>
 
@@ -258,13 +276,17 @@
 <script>
   const filterBtn = document.getElementById("filter-btn");
   const filterDropdown = document.getElementById("filter-dropdown");
-  filterBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
+  const closeBtn = document.getElementById("filter-close-btn");
+
+  // Open/Close using Filter button
+  filterBtn.addEventListener("click", () => {
     filterDropdown.classList.toggle("open");
   });
-  document.addEventListener("click", () =>
-    filterDropdown.classList.remove("open"),
-  );
+
+  // Close only when X is clicked
+  closeBtn.addEventListener("click", () => {
+    filterDropdown.classList.remove("open");
+  });
 
   const searchInput = document.getElementById("job-search");
   const cards = document.querySelectorAll("#job-grid .job-card");
