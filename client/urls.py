@@ -22,5 +22,9 @@ urlpatterns = [
     path("jobs/<int:pk>/download/", views.job_download, name="job_download"),
 
     path("about/", views.about, name="about"),
-    path("login/", views.login_view, name="login"),
+   # Auth
+    path('login/',   views.login_signup, name='login'),
+
+    # Profile
+    path('profile/', views.profile,      name='profile'),
 ]
