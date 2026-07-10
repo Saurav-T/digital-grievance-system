@@ -1,314 +1,317 @@
-{% extends "client/base.html" %} {% load static %} {% block title %}Job Listings
-– Digital Grievance and Notice Board System{% endblock %} {% block extra_head %}
+{% extends "client/base.html" %}
+{% load static %}
+
+{% block title %}Job Listings – Digital Grievance and Notice Board System{% endblock %}
+
+{% block extra_head %}
 <style>
   .job-card {
-    transition:
-      transform 0.18s ease,
-      box-shadow 0.18s ease;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
   }
   .job-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(30, 58, 138, 0.13);
   }
-  #filter-dropdown {
-    display: none;
-  }
-  #filter-dropdown.open {
-    display: block;
-  }
-  .page-label {
-    display: inline-block;
-    border-bottom: 2px solid #1e3a8a;
-    color: #1e3a8a;
+  #filter-dropdown { display: none; }
+  #filter-dropdown.open { display: block; }
+
+  .page-btn.active {
+    background-color: #1e3a8a !important;
+    color: #fff !important;
+    border-color: #1e3a8a !important;
     font-weight: 700;
-    font-size: 1.05rem;
-    padding-bottom: 2px;
-    letter-spacing: 0.01em;
+  }
+  .page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 </style>
-{% endblock %} {% block content %}
+{% endblock %}
+
+{% block content %}
 <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Page heading -->
   <div class="mb-6">
-    <span class="inline-block text-brand-blue font-semibold text-lg pb-1 border-b-2 border-red-500">Job Listing</span>
+    <span class="inline-block text-brand-blue font-bold text-lg pb-1 border-b-2 border-brand-blue">
+      Job Listings
+    </span>
   </div>
 
   <!-- Search + Filter -->
-  <!-- Search + Filter -->
-<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
-  <div class="search-wrapper flex items-center gap-2 w-full sm:w-auto">
-    <input
-      id="job-search"
-      type="text"
-      placeholder="Search"
-      class="w-full sm:w-64 lg:w-72 px-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-500
-             border border-gray-300 rounded bg-gray-100
-             focus:outline-none focus:ring-2 focus:ring-brand-blue"
-    />
-
-    <button
-      type="button"
-      class="shrink-0 bg-brand-blue hover:bg-brand-blue-dark text-white px-6 py-2.5
-             text-sm font-semibold rounded transition-colors"
-    >
-      Search
-    </button>
-  </div>
-
-  <div class="relative self-end sm:self-auto shrink-0">
-    <button
-      id="filter-btn"
-      type="button"
-      class="flex items-center gap-2 border border-gray-300 rounded bg-gray-100
-             hover:bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors"
-    >
-      Filter
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-4 w-4 text-gray-500"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-      >
-        <path
-          fill-rule="evenodd"
-          d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-          clip-rule="evenodd"
-        />
-      </svg>
-    </button>
-
-    <div
-  id="filter-dropdown"
-  class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-10 p-3 text-sm text-gray-700"
->
-  <div class="flex items-center justify-between mb-3">
-    <p class="font-semibold text-gray-800">Filter by</p>
-
-    <button
-      id="filter-close-btn"
-      type="button"
-      class="text-gray-500 hover:text-red-600 transition-colors"
-      aria-label="Close filter"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg"
-           class="h-5 w-5"
-           fill="none"
-           viewBox="0 0 24 24"
-           stroke="currentColor">
-        <path stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"/>
-      </svg>
-    </button>
-  </div>
-
-  <div class="space-y-2">
-    <label class="flex items-center gap-2 cursor-pointer">
-      <input type="checkbox" class="accent-brand-blue">
-      Ministry of Education
-    </label>
-
-    <label class="flex items-center gap-2 cursor-pointer">
-      <input type="checkbox" class="accent-brand-blue">
-      Kathmandu
-    </label>
-
-    <label class="flex items-center gap-2 cursor-pointer">
-      <input type="checkbox" class="accent-brand-blue">
-      Deadline: This Month
-    </label>
-
-    <label class="flex items-center gap-2 cursor-pointer">
-      <input type="checkbox" class="accent-brand-blue">
-      Computer Operator
-    </label>
-  </div>
-</div>
-  </div>
-</div>
-
-  <!-- Job cards grid -->
-  <div id="job-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    {% comment %} ── DB integration: replace the static loop below with
-    ────────────────────── {% for job in jobs %}
-    <a
-      href="{% url 'job_detail' job.id %}"
-      class="job-card flex items-center gap-4 bg-blue-100 hover:bg-blue-200 rounded-lg p-4 cursor-pointer"
-      data-title="{{ job.job_title|lower }}"
-      data-org="{{ job.department|lower }}"
-    >
-      <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20">
-        <img
-          src="{% static 'client/img/emblem.png' %}"
-          alt="{{ job.department }}"
-          class="w-full h-full object-contain"
-        />
-      </div>
-      <div class="min-w-0">
-        <p class="font-bold text-gray-900 text-sm sm:text-base">
-          {{ job.job_title }}
-        </p>
-        <p class="text-xs sm:text-sm text-gray-700">{{ job.department }}</p>
-        <p class="text-xs sm:text-sm text-gray-600">
-          {{ job.department_location }}
-        </p>
-        <p class="text-xs sm:text-sm text-gray-600">
-          Deadline:
-          <span class="font-medium text-gray-800"
-            >{{ job.deadline|date:"jS F, Y" }}</span
-          >
-        </p>
-      </div>
-    </a>
-    {% empty %}
-    <p class="col-span-2 text-center text-gray-500 py-16">
-      No job listings found.
-    </p>
-    {% endfor %}
-    ──────────────────────────────────────────────────────────────────────────
-    {% endcomment %} {% for i in "12345678" %}
-    <a
-      href="{% url 'job_detail' forloop.counter %}"
-      class="job-card flex items-center gap-4 bg-blue-100 hover:bg-blue-200 rounded-lg p-4 cursor-pointer"
-      data-title="computer operator"
-      data-org="ministry of education"
-    >
-      <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20">
-        <img
-          src="{% static 'client/img/emblem.png' %}"
-          alt="Ministry of Education"
-          class="w-full h-full object-contain"
-          onerror="
-            this.onerror = null;
-            this.src =
-              'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Emblem_of_Nepal.svg/120px-Emblem_of_Nepal.svg.png';
-          "
-        />
-      </div>
-      <div class="min-w-0">
-        <p class="font-bold text-gray-900 text-sm sm:text-base leading-snug">
-          Computer Operator
-        </p>
-        <p class="text-gray-700 text-xs sm:text-sm mt-0.5">
-          Ministry of Education
-        </p>
-        <p class="text-gray-600 text-xs sm:text-sm">Kathmandu, Nepal</p>
-        <p class="text-gray-600 text-xs sm:text-sm">
-          Deadline:
-          <span
-            class="font-medium {% if forloop.last %}text-red-600{% else %}text-gray-800{% endif %}"
-          >
-            {% if forloop.last %}30th July, 2028{% else %}30th July, 2026{% endif %}
-          </span>
-        </p>
-      </div>
-    </a>
-    {% endfor %}
-  </div>
-
-  <div id="empty-state" class="hidden text-center py-20 text-gray-500">
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      class="h-12 w-12 mx-auto mb-3 text-gray-300"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="1.5"
-        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+    <div class="search-wrapper flex items-center gap-2 w-full sm:w-auto">
+      <input
+        id="job-search"
+        type="text"
+        placeholder="Search"
+        class="w-full sm:w-64 lg:w-72 px-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-500
+               border border-gray-300 rounded bg-gray-100
+               focus:outline-none focus:ring-2 focus:ring-brand-blue"
       />
+      <button
+        id="search-btn"
+        type="button"
+        class="shrink-0 bg-brand-blue hover:bg-brand-blue-dark text-white px-6 py-2.5
+               text-sm font-semibold rounded transition-colors"
+      >
+        Search
+      </button>
+    </div>
+
+    <div class="relative self-end sm:self-auto shrink-0">
+      <button
+        id="filter-btn"
+        type="button"
+        class="flex items-center gap-2 border border-gray-300 rounded bg-gray-100
+               hover:bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors"
+      >
+        Filter
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      <div id="filter-dropdown" class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-10 p-3 text-sm text-gray-700">
+        <div class="flex items-center justify-between mb-3">
+          <p class="font-semibold text-gray-800">Filter by</p>
+          <button id="filter-close-btn" type="button" class="text-gray-400 hover:text-red-500 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="space-y-2">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" class="accent-brand-blue filter-check" data-filter="ministry of education"> Ministry of Education
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" class="accent-brand-blue filter-check" data-filter="kathmandu"> Kathmandu
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" class="accent-brand-blue filter-check" data-filter="deadline-month"> Deadline: This Month
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" class="accent-brand-blue filter-check" data-filter="computer operator"> Computer Operator
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Job cards grid (populated by JS) -->
+  <div id="job-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 min-h-[200px]"></div>
+
+  <!-- Empty state -->
+  <div id="empty-state" class="hidden text-center py-20 text-gray-500">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
     </svg>
     <p class="text-lg font-medium">No jobs match your search.</p>
     <p class="text-sm mt-1">Try different keywords or clear the filter.</p>
   </div>
+
   <!-- Pagination -->
-<nav aria-label="Pagination" class="mt-10 flex items-center justify-center gap-1">
-  <button
-    type="button"
-    disabled
-    class="px-3 py-1.5 text-sm rounded border border-gray-200 text-gray-400 cursor-not-allowed"
-  >
-    Previous
-  </button>
+  <nav id="pagination" aria-label="Pagination" class="mt-10 flex flex-wrap items-center justify-center gap-1"></nav>
 
-  <button
-    type="button"
-    class="px-3 py-1.5 text-sm rounded bg-brand-blue text-white font-semibold"
-  >
-    1
-  </button>
-
-  <button
-    type="button"
-    class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-  >
-    2
-  </button>
-
-  <button
-    type="button"
-    class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-  >
-    3
-  </button>
-
-  <span class="px-2 text-sm text-gray-400">…</span>
-
-  <button
-    type="button"
-    class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-  >
-    10
-  </button>
-
-  <button
-    type="button"
-    class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-  >
-    Next
-  </button>
-</nav>
 </section>
-{% endblock %} {% block extra_js %}
+
+{% comment %}
+  DATA ISLAND — In production replace the contents of this script tag with:
+    {{ jobs_json|json_script:"job-data" }}
+  where jobs_json is produced in the view:
+    import json
+    context['jobs_json'] = json.dumps([
+        {'title': j.job_title, 'org': j.department, 'location': j.department_location,
+         'deadline': j.deadline.isoformat(), 'url': j.get_absolute_url(), 'logo': ''}
+        for j in jobs
+    ])
+{% endcomment %}
+<script id="job-data" type="application/json">
+[
+  { "title": "Computer Operator",    "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "#" },
+  { "title": "Data Entry Officer",   "org": "Ministry of Finance",   "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "#" },
+  { "title": "Computer Operator",    "org": "Ministry of Education", "location": "Pokhara, Nepal",    "deadline": "2026-07-30", "url": "#" },
+  { "title": "IT Support Officer",   "org": "Ministry of Health",    "location": "Lalitpur, Nepal",   "deadline": "2026-08-15", "url": "#" },
+  { "title": "Network Engineer",     "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "#" },
+  { "title": "System Administrator", "org": "Ministry of Home",      "location": "Bhaktapur, Nepal",  "deadline": "2026-08-01", "url": "#" },
+  { "title": "Computer Operator",    "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "#" },
+  { "title": "Web Developer",        "org": "Ministry of Finance",   "location": "Kathmandu, Nepal",  "deadline": "2026-08-20", "url": "#" },
+  { "title": "Database Admin",       "org": "Ministry of Health",    "location": "Pokhara, Nepal",    "deadline": "2026-07-30", "url": "#" },
+  { "title": "Computer Operator",    "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "#" },
+  { "title": "Software Engineer",    "org": "Ministry of Science",   "location": "Lalitpur, Nepal",   "deadline": "2026-09-01", "url": "#" },
+  { "title": "IT Officer",           "org": "Ministry of Home",      "location": "Kathmandu, Nepal",  "deadline": "2026-07-28", "url": "#" }
+]
+</script>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-  const filterBtn = document.getElementById("filter-btn");
-  const filterDropdown = document.getElementById("filter-dropdown");
-  const closeBtn = document.getElementById("filter-close-btn");
+(function () {
+  const PER_PAGE = 6;
+  const FALLBACK = "{% static 'client/img/emblem.png' %}";
+  const NOW = new Date();
 
-  // Open/Close using Filter button
-  filterBtn.addEventListener("click", () => {
-    filterDropdown.classList.toggle("open");
-  });
+  let allJobs     = [];
+  let filtered    = [];
+  let currentPage = 1;
 
-  // Close only when X is clicked
-  closeBtn.addEventListener("click", () => {
-    filterDropdown.classList.remove("open");
-  });
+  const grid           = document.getElementById('job-grid');
+  const paginationEl   = document.getElementById('pagination');
+  const emptyState     = document.getElementById('empty-state');
+  const searchInput    = document.getElementById('job-search');
+  const searchBtn      = document.getElementById('search-btn');
+  const filterBtn      = document.getElementById('filter-btn');
+  const filterDropdown = document.getElementById('filter-dropdown');
+  const filterCloseBtn = document.getElementById('filter-close-btn');
+  const filterChecks   = document.querySelectorAll('.filter-check');
 
-  const searchInput = document.getElementById("job-search");
-  const cards = document.querySelectorAll("#job-grid .job-card");
-  const emptyState = document.getElementById("empty-state");
+  /* Load data */
+  try { allJobs = JSON.parse(document.getElementById('job-data').textContent); }
+  catch (e) { console.error('Job data error', e); }
 
-  function filterJobs() {
-    const q = searchInput.value.toLowerCase().trim();
-    let visible = 0;
-    cards.forEach((card) => {
-      const match =
-        !q ||
-        (card.dataset.title || "").toLowerCase().includes(q) ||
-        (card.dataset.org || "").toLowerCase().includes(q);
-      card.style.display = match ? "" : "none";
-      if (match) visible++;
-    });
-    emptyState.classList.toggle("hidden", visible > 0);
+  /* Helpers */
+  function formatDeadline(iso) {
+    const d = new Date(iso);
+    if (isNaN(d)) return iso;
+    const day = d.getDate();
+    const s = [,'st','nd','rd'][((day % 100) - 20) % 10] || [,'st','nd','rd'][day % 100] || 'th';
+    const mo = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'][d.getMonth()];
+    return `${day}${s} ${mo}, ${d.getFullYear()}`;
   }
 
-  searchInput.addEventListener("input", filterJobs);
-  document
-    .querySelector(".search-wrapper button")
-    .addEventListener("click", filterJobs);
+  function isThisMonth(iso) {
+    const d = new Date(iso);
+    return d.getFullYear() === NOW.getFullYear() && d.getMonth() === NOW.getMonth();
+  }
+
+  function isDeadlineSoon(iso) {
+    const diff = (new Date(iso) - NOW) / 86400000;
+    return diff >= 0 && diff <= 7;
+  }
+
+  /* Filter */
+  function applyFilters() {
+    const q = searchInput.value.toLowerCase().trim();
+    const active = [...filterChecks].filter(c => c.checked).map(c => c.dataset.filter);
+
+    filtered = allJobs.filter(job => {
+      if (q && !job.title.toLowerCase().includes(q) && !job.org.toLowerCase().includes(q)) return false;
+      for (const f of active) {
+        if (f === 'deadline-month') { if (!isThisMonth(job.deadline)) return false; }
+        else if (!job.title.toLowerCase().includes(f) &&
+                 !job.org.toLowerCase().includes(f) &&
+                 !job.location.toLowerCase().includes(f)) return false;
+      }
+      return true;
+    });
+
+    currentPage = 1;
+    render();
+  }
+
+  /* Render cards */
+  function render() {
+    const total      = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+    currentPage      = Math.min(currentPage, totalPages);
+
+    const pageJobs = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+
+    if (pageJobs.length === 0) {
+      grid.innerHTML = '';
+      emptyState.classList.remove('hidden');
+    } else {
+      emptyState.classList.add('hidden');
+      grid.innerHTML = pageJobs.map(job => `
+        <a href="${job.url}"
+           class="job-card flex items-center gap-4 bg-blue-100 hover:bg-blue-200 rounded-lg p-4 cursor-pointer">
+          <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20">
+            <img src="${job.logo || FALLBACK}"
+                 alt="${job.org}"
+                 class="w-full h-full object-contain"
+                 onerror="this.onerror=null;this.src='${FALLBACK}';">
+          </div>
+          <div class="min-w-0">
+            <p class="font-bold text-gray-900 text-sm sm:text-base leading-snug">${job.title}</p>
+            <p class="text-gray-700 text-xs sm:text-sm mt-0.5">${job.org}</p>
+            <p class="text-gray-600 text-xs sm:text-sm">${job.location}</p>
+            <p class="text-gray-600 text-xs sm:text-sm">
+              Deadline:
+              <span class="font-medium ${isDeadlineSoon(job.deadline) ? 'text-red-600' : 'text-gray-800'}">
+                ${formatDeadline(job.deadline)}
+              </span>
+            </p>
+          </div>
+        </a>`).join('');
+    }
+
+    renderPagination(totalPages);
+  }
+
+  /* Render pagination */
+  function renderPagination(totalPages) {
+    paginationEl.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    function mkBtn(label, page, disabled, active) {
+      const btn = document.createElement('button');
+      btn.type        = 'button';
+      btn.textContent = label;
+      btn.disabled    = disabled;
+      btn.className   = 'page-btn px-3 py-1.5 text-sm rounded border transition-colors ' +
+        (active   ? 'active border-brand-blue bg-brand-blue text-white font-bold' :
+         disabled ? 'border-gray-200 bg-white text-gray-400' :
+                    'border-gray-300 bg-white text-gray-700 hover:bg-gray-100');
+      if (!disabled && !active) {
+        btn.addEventListener('click', () => {
+          currentPage = page;
+          render();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      }
+      return btn;
+    }
+
+    /* Build page number array with ellipsis */
+    function pageRange(cur, total) {
+      if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+      const r = [1];
+      if (cur > 3) r.push('…');
+      for (let p = Math.max(2, cur - 1); p <= Math.min(total - 1, cur + 1); p++) r.push(p);
+      if (cur < total - 2) r.push('…');
+      r.push(total);
+      return r;
+    }
+
+    paginationEl.appendChild(mkBtn('← Prev', currentPage - 1, currentPage === 1, false));
+
+    pageRange(currentPage, totalPages).forEach(p => {
+      if (p === '…') {
+        const span = document.createElement('span');
+        span.textContent = '…';
+        span.className   = 'px-2 text-sm text-gray-400';
+        paginationEl.appendChild(span);
+      } else {
+        paginationEl.appendChild(mkBtn(p, p, false, p === currentPage));
+      }
+    });
+
+    paginationEl.appendChild(mkBtn('Next →', currentPage + 1, currentPage === totalPages, false));
+  }
+
+  /* Events */
+  filterBtn.addEventListener('click', e => { e.stopPropagation(); filterDropdown.classList.toggle('open'); });
+  filterCloseBtn.addEventListener('click', () => filterDropdown.classList.remove('open'));
+  document.addEventListener('click', () => filterDropdown.classList.remove('open'));
+  filterDropdown.addEventListener('click', e => e.stopPropagation());
+  searchInput.addEventListener('input', applyFilters);
+  searchBtn.addEventListener('click', applyFilters);
+  filterChecks.forEach(c => c.addEventListener('change', applyFilters));
+
+  /* Boot */
+  filtered = [...allJobs];
+  render();
+})();
 </script>
 {% endblock %}
