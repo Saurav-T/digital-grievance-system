@@ -1,0 +1,297 @@
+{% extends "client/base.html" %}
+{% load static %}
+
+{% block title %}About Us – Digital Grievance and Notice Board System{% endblock %}
+
+{% block extra_head %}
+<style>
+  .step-connector {
+    width: 2px;
+    height: 2rem;
+    background: #1e3a8a;
+    margin: 0 auto;
+    opacity: 0.3;
+  }
+  .feature-card {
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .feature-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(30, 58, 138, 0.12);
+  }
+  .section-label {
+    display: inline-block;
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #1e3a8a;
+    padding-bottom: 4px;
+    border-bottom: 3px solid #ef4444;
+    margin-bottom: 1.5rem;
+  }
+  .hero-strip {
+    background:  #294885;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ═══════════════ HERO ══ -->
+<div class="hero-strip text-white">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
+    <p class="text-xs sm:text-sm font-semibold tracking-widest uppercase text-blue-300 mb-3">
+      Digital Government Platform · Nepal
+    </p>
+    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight mb-5">
+      About the Digital Grievance<br class="hidden sm:block">
+      and Notice Board System
+    </h1>
+    <p class="text-base sm:text-lg text-blue-200 max-w-2xl mx-auto mb-6 leading-relaxed">
+      Connecting citizens and government through transparent,<br class="hidden sm:block">
+      efficient, and accessible digital public services.
+    </p>
+    <p class="text-sm sm:text-base text-blue-100 max-w-3xl mx-auto leading-relaxed opacity-90">
+      This platform enables every citizen to submit grievances online and access official
+      government notices all in one centralised location, without visiting a government
+      office or navigating multiple websites. It bridges the communication gap between the
+      public and government institutions through a single, secure digital window.
+    </p>
+  </div>
+</div>
+
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
+
+  <!-- ═══════════════ OUR MISSION ══ -->
+  <section>
+    <h2 class="section-label">Our Mission</h2>
+    <div class="bg-brand-blue rounded-xl p-8 sm:p-10 text-white">
+      <div class="flex items-start gap-5">
+        <div class="flex-shrink-0 bg-white/15 rounded-full p-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <p class="text-base sm:text-lg leading-relaxed text-blue-100">
+          Our mission is to improve communication between citizens and government by providing a
+          <strong class="text-white">secure, transparent, and user-friendly</strong> digital platform
+          for grievance management and official notice publication. We believe every citizen deserves
+          timely responses and easy access to information that affects their daily lives.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ WHAT WE DO ══ -->
+  <section>
+    <h2 class="section-label">What We Do</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+      <div class="feature-card bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
+        <div class="text-4xl mb-4">📝</div>
+        <h3 class="font-bold text-brand-blue text-sm sm:text-base mb-2">Online Grievance Submission</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">Submit complaints and suggestions anytime without visiting offices.</p>
+      </div>
+
+      <div class="feature-card bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
+        <div class="text-4xl mb-4">📢</div>
+        <h3 class="font-bold text-brand-blue text-sm sm:text-base mb-2">Official Notice Publication</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">Receive authentic notices published directly by government authorities.</p>
+      </div>
+
+      <div class="feature-card bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
+        <div class="text-4xl mb-4">📊</div>
+        <h3 class="font-bold text-brand-blue text-sm sm:text-base mb-2">Transparent Tracking</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">Track the progress and status of submitted grievances in real time.</p>
+      </div>
+
+      <div class="feature-card bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
+        <div class="text-4xl mb-4">🔒</div>
+        <h3 class="font-bold text-brand-blue text-sm sm:text-base mb-2">Secure Digital Services</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">Protect citizen information through secure authentication and data handling.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════ OBJECTIVES ══ -->
+  <section class="bg-gray-50 rounded-xl p-8 sm:p-10">
+    <h2 class="section-label">Objectives</h2>
+    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3">
+      <li class="flex items-start gap-3 text-sm sm:text-base text-gray-700">
+        <span class="mt-2 w-2 h-2 rounded-full bg-brand-blue flex-shrink-0"></span>
+        Improve accessibility to government services.
+      </li>
+      <li class="flex items-start gap-3 text-sm sm:text-base text-gray-700">
+        <span class="mt-2 w-2 h-2 rounded-full bg-brand-blue flex-shrink-0"></span>
+        Reduce paperwork and manual processing.
+      </li>
+      <li class="flex items-start gap-3 text-sm sm:text-base text-gray-700">
+        <span class="mt-2 w-2 h-2 rounded-full bg-brand-blue flex-shrink-0"></span>
+        Enhance transparency and accountability.
+      </li>
+      <li class="flex items-start gap-3 text-sm sm:text-base text-gray-700">
+        <span class="mt-2 w-2 h-2 rounded-full bg-brand-blue flex-shrink-0"></span>
+        Ensure timely grievance resolution.
+      </li>
+      <li class="flex items-start gap-3 text-sm sm:text-base text-gray-700">
+        <span class="mt-2 w-2 h-2 rounded-full bg-brand-blue flex-shrink-0"></span>
+        Deliver official notices digitally.
+      </li>
+      <li class="flex items-start gap-3 text-sm sm:text-base text-gray-700">
+        <span class="mt-2 w-2 h-2 rounded-full bg-brand-blue flex-shrink-0"></span>
+        Promote citizen participation.
+      </li>
+    </ul>
+  </section>
+
+  <!-- ═══════════════ HOW IT WORKS ══ -->
+  <section>
+    <h2 class="section-label">How It Works</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+      <!-- Grievance flow -->
+      <div class="bg-white border border-gray-100 rounded-xl p-7 shadow-sm">
+        <h3 class="font-bold text-brand-blue text-base mb-6 flex items-center gap-2">
+          <span class="text-xl">📝</span> Grievance Submission Flow
+        </h3>
+        <div class="flex flex-col items-center">
+
+          <div class="w-full flex items-center gap-4">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-blue text-white text-sm font-bold flex items-center justify-center">1</div>
+            <span class="text-sm sm:text-base text-gray-800 font-medium">Register / Login</span>
+          </div>
+          <div class="step-connector my-1"></div>
+
+          <div class="w-full flex items-center gap-4">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-blue text-white text-sm font-bold flex items-center justify-center">2</div>
+            <span class="text-sm sm:text-base text-gray-800 font-medium">Submit Grievance</span>
+          </div>
+          <div class="step-connector my-1"></div>
+
+          <div class="w-full flex items-center gap-4">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-blue text-white text-sm font-bold flex items-center justify-center">3</div>
+            <span class="text-sm sm:text-base text-gray-800 font-medium">Review by Officials</span>
+          </div>
+          <div class="step-connector my-1"></div>
+
+          <div class="w-full flex items-center gap-4">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-blue text-white text-sm font-bold flex items-center justify-center">4</div>
+            <span class="text-sm sm:text-base text-gray-800 font-medium">Receive Response</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Notice flow -->
+      <div class="bg-white border border-gray-100 rounded-xl p-7 shadow-sm">
+        <h3 class="font-bold text-brand-blue text-base mb-6 flex items-center gap-2">
+          <span class="text-xl">📢</span> Notice Publication Flow
+        </h3>
+        <div class="flex flex-col items-center">
+
+          <div class="w-full flex items-center gap-4">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-red-600 text-white text-sm font-bold flex items-center justify-center">1</div>
+            <span class="text-sm sm:text-base text-gray-800 font-medium">Government</span>
+          </div>
+          <div class="step-connector my-1"></div>
+
+          <div class="w-full flex items-center gap-4">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-blue text-white text-sm font-bold flex items-center justify-center">2</div>
+            <span class="text-sm sm:text-base text-gray-800 font-medium">Publish Notice</span>
+          </div>
+          <div class="step-connector my-1"></div>
+
+          <div class="w-full flex items-center gap-4">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-blue text-white text-sm font-bold flex items-center justify-center">3</div>
+            <span class="text-sm sm:text-base text-gray-800 font-medium">System</span>
+          </div>
+          <div class="step-connector my-1"></div>
+
+          <div class="w-full flex items-center gap-4">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-blue text-white text-sm font-bold flex items-center justify-center">4</div>
+            <span class="text-sm sm:text-base text-gray-800 font-medium">Citizens View Notice</span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════ KEY FEATURES ══ -->
+  <section>
+    <h2 class="section-label">Key Features</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <!-- Citizen features -->
+      <div class="bg-blue-50 border border-blue-100 rounded-xl p-7">
+        <h3 class="flex items-center gap-2 font-bold text-brand-blue text-base mb-5">
+          <span class="text-xl">👤</span> Citizen Features
+        </h3>
+        <ul class="space-y-3">
+          {% for label in citizen_features %}
+          <li class="flex items-center gap-3 text-sm text-gray-700">
+            <svg class="flex-shrink-0 h-4 w-4 text-brand-blue" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            {{ label }}
+          </li>
+          {% empty %}
+          
+          <li class="flex items-center gap-3 text-sm text-gray-700">
+            <svg class="flex-shrink-0 h-4 w-4 text-brand-blue" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            {{ label }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <!-- Admin features -->
+      <div class="bg-brand-blue rounded-xl p-7 text-white">
+        <h3 class="flex items-center gap-2 font-bold text-white text-base mb-5">
+          <span class="text-xl">🛠️</span> Administrative Features
+        </h3>
+        <ul class="space-y-3">
+          {% for label in admin_features %}
+          <li class="flex items-center gap-3 text-sm text-blue-100">
+            <svg class="flex-shrink-0 h-4 w-4 text-blue-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            {{ label }}
+          </li>
+          {% empty %}
+          
+          <li class="flex items-center gap-3 text-sm text-blue-100">
+            <svg class="flex-shrink-0 h-4 w-4 text-blue-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            {{ label }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════ VISION ══ -->
+  <section class="bg-gradient-to-br from-brand-blue to-blue-600 rounded-xl p-8 sm:p-12 text-white text-center">
+    <div class="text-4xl mb-4">🌐</div>
+    <h2 class="text-xl sm:text-2xl font-extrabold mb-4">Our Vision</h2>
+    <p class="text-blue-100 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
+      To establish a modern, transparent, and citizen-centric digital governance platform that
+      strengthens trust between government institutions and the public — making Nepal's public
+      services faster, fairer, and reachable for every citizen, everywhere.
+    </p>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+
+</script>
+{% endblock %}

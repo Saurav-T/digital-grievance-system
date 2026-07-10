@@ -353,11 +353,16 @@ def job_download(request, pk):
 # =============================================================================
 
 def about(request):
-    return placeholder_page(
-        request,
-        "About Us",
-        "Background on the Ministry of Home Affairs and this system will live here.",
-    )
+    return render(request, 'client/about.html', {
+        'citizen_features': [
+            'Secure Registration', 'Online Complaint Submission',
+            'Complaint Status Tracking', 'Notice Board', 'User Profile', 'Notifications',
+        ],
+        'admin_features': [
+            'Notice Management', 'Grievance Management', 'User Management',
+            'Dashboard Analytics', 'Role-Based Access', 'Report Generation',
+        ],
+    })
 
 
 def login_view(request):
