@@ -34,5 +34,8 @@ After DB integration, pass notice.id from your queryset.
       {{ title }}
     </p>
     <p class="text-xs text-gray-500 mt-2">{{ posted_at }}</p>
+    <p class="text-sm text-gray-600 mt-2 line-clamp-2">
+      {{ description|default:"This notice contains important updates regarding the latest schedule, deadlines, and required actions for the concerned department..." }}
+    </p>
   </div>
 </a>
