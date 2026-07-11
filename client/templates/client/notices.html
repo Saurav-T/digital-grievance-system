@@ -9,6 +9,17 @@
   .notice-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(30,58,138,.13); }
   #notice-filter-dropdown { display:none; }
   #notice-filter-dropdown.open { display:block; }
+
+  .page-btn.active {
+    background-color: #1e3a8a !important;
+    color: #fff !important;
+    border-color: #1e3a8a !important;
+    font-weight: 700;
+  }
+  .page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 </style>
 {% endblock %}
 
@@ -25,7 +36,7 @@
       <input id="notice-search" type="text" placeholder="Search"
              class="w-full sm:w-64 lg:w-72 px-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-500
                     border border-gray-300 rounded bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-blue"/>
-      <button type="button"
+      <button id="notice-search-btn" type="button"
               class="shrink-0 bg-brand-blue hover:bg-brand-blue-dark text-white px-6 py-2.5
                      text-sm font-semibold rounded transition-colors">
         Search
@@ -42,32 +53,27 @@
         </svg>
       </button>
       <div id="notice-filter-dropdown"
-           class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-10 p-3 space-y-2 text-sm text-gray-700">
-        <p class="font-semibold text-gray-800 mb-1">Filter by</p>
-        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue"> Renewal &amp; Fees</label>
-        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue"> Recruitment</label>
-        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue"> Public Holiday</label>
-        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue"> This Month</label>
+           class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-10 p-3 text-sm text-gray-700">
+        <div class="flex items-center justify-between mb-3">
+          <p class="font-semibold text-gray-800">Filter by</p>
+          <button id="notice-filter-close-btn" type="button" class="text-gray-400 hover:text-red-500 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="space-y-2">
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="renewal"> Renewal &amp; Fees</label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="recruitment"> Recruitment</label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="holiday"> Public Holiday</label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="this-month"> This Month</label>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Notice cards grid -->
-  <div id="notice-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-
-    {% comment %}
-    ── DB integration: replace the static loop below with ──────────────────────
-    {% for notice in notices %}
-      {% include "client/partials/notices/notice_list_card.html" with title=notice.title posted_at=notice.issue_date|date:"F j, Y, g:i A" notice_id=notice.id %}
-    {% empty %}
-      <p class="col-span-full text-center text-gray-500 py-16">No notices published yet.</p>
-    {% endfor %}
-    ────────────────────────────────────────────────────────────────────────── {% endcomment %}
-
-    {% for i in "123456789" %}
-      {% include "client/partials/notices/notice_list_card.html" with title="नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना" posted_at="June 18, 2026, 09:33 AM" notice_id=forloop.counter %}
-    {% endfor %}
-  </div>
+  <div id="notice-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 min-h-[240px]"></div>
 
   <div id="notice-empty-state" class="hidden text-center py-20 text-gray-500">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300" fill="none"
@@ -80,41 +86,163 @@
   </div>
 
   <!-- Pagination -->
-  <nav aria-label="Pagination" class="mt-10 flex items-center justify-center gap-1">
-    <button type="button" disabled class="px-3 py-1.5 text-sm rounded border border-gray-200 text-gray-400 cursor-not-allowed">Previous</button>
-    <button type="button" class="px-3 py-1.5 text-sm rounded bg-brand-blue text-white font-semibold">1</button>
-    <button type="button" class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">2</button>
-    <button type="button" class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">3</button>
-    <span class="px-2 text-sm text-gray-400">…</span>
-    <button type="button" class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">10</button>
-    <button type="button" class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Next</button>
-  </nav>
+  <nav id="notice-pagination" aria-label="Pagination" class="mt-10 flex flex-wrap items-center justify-center gap-1"></nav>
+
+  <script id="notice-data" type="application/json">
+  [
+    {"id":1,"title":"नवीकरण तथा बेरुजु रकम दाखिला गर्ने सम्बन्धी सूचना","posted_at":"June 18, 2026, 09:33 AM","category":"renewal","description":"Important reminder for all concerned offices to complete the renewal and fee submission process before the deadline..."},
+    {"id":2,"title":"नयाँ भर्ती सम्बन्धी सूचना","posted_at":"June 14, 2026, 04:10 PM","category":"recruitment","description":"Details regarding the upcoming recruitment process, eligibility requirements, and application timeline..."},
+    {"id":3,"title":"सार्वजनिक बिदा सम्बन्धी सूचना","posted_at":"June 10, 2026, 08:00 AM","category":"holiday","description":"Public holiday notice for administrative offices and public service delivery points across the region..."},
+    {"id":4,"title":"यस महिनाको कार्यसूची अपडेट","posted_at":"June 08, 2026, 11:45 AM","category":"this-month","description":"A short update on the current month’s work schedule and important procedural changes..."},
+    {"id":5,"title":"विभागीय बैठक सम्बन्धी सूचना","posted_at":"June 05, 2026, 02:30 PM","category":"renewal","description":"All department heads are requested to attend the scheduled review meeting with updated documents..."},
+    {"id":6,"title":"अन्तरविभागीय सहकार्य सूचना","posted_at":"June 02, 2026, 01:00 PM","category":"recruitment","description":"Cooperation request between departments for the implementation of the new service procedure..."},
+    {"id":7,"title":"सुरक्षा अभ्यास सम्बन्धी सूचना","posted_at":"May 28, 2026, 03:20 PM","category":"holiday","description":"Reminder for all staff to participate in the scheduled safety drill and follow the instructions..."},
+    {"id":8,"title":"कर्मचारी प्रशिक्षण कार्यक्रम","posted_at":"May 24, 2026, 10:10 AM","category":"this-month","description":"Training schedule and attendance instructions for all current and newly appointed staff members..."},
+    {"id":9,"title":"नवीनतम सूचना प्रकाशन","posted_at":"May 20, 2026, 06:15 PM","category":"renewal","description":"A brief overview of newly published notices and the steps required to access them online..."}
+  ]
+  </script>
 </section>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  const filterBtn      = document.getElementById('notice-filter-btn');
-  const filterDropdown = document.getElementById('notice-filter-dropdown');
-  filterBtn.addEventListener('click', e => { e.stopPropagation(); filterDropdown.classList.toggle('open'); });
-  document.addEventListener('click', () => filterDropdown.classList.remove('open'));
-
+(function () {
+  const PER_PAGE = 6;
+  const noticeDataEl = document.getElementById('notice-data');
+  const grid = document.getElementById('notice-grid');
+  const paginationEl = document.getElementById('notice-pagination');
+  const emptyState = document.getElementById('notice-empty-state');
   const searchInput = document.getElementById('notice-search');
-  const cards       = document.querySelectorAll('#notice-grid .notice-card');
-  const emptyState  = document.getElementById('notice-empty-state');
+  const searchBtn = document.getElementById('notice-search-btn');
+  const filterBtn = document.getElementById('notice-filter-btn');
+  const filterDropdown = document.getElementById('notice-filter-dropdown');
+  const filterCloseBtn = document.getElementById('notice-filter-close-btn');
+  const filterChecks = document.querySelectorAll('.filter-check');
 
-  function filterNotices() {
-    const q = searchInput.value.toLowerCase().trim();
-    let visible = 0;
-    cards.forEach(card => {
-      const match = !q || (card.dataset.title || '').toLowerCase().includes(q);
-      card.style.display = match ? '' : 'none';
-      if (match) visible++;
-    });
-    emptyState.classList.toggle('hidden', visible > 0);
+  let allNotices = [];
+  let filtered = [];
+  let currentPage = 1;
+
+  try {
+    allNotices = JSON.parse(noticeDataEl.textContent);
+  } catch (error) {
+    console.error('Notice data error', error);
   }
 
-  searchInput.addEventListener('input', filterNotices);
-  document.querySelector('.search-wrapper button').addEventListener('click', filterNotices);
+  function applyFilters() {
+    const q = searchInput.value.toLowerCase().trim();
+    const active = [...filterChecks].filter(c => c.checked).map(c => c.dataset.filter);
+
+    filtered = allNotices.filter(notice => {
+      const haystack = `${notice.title} ${notice.description} ${notice.category}`.toLowerCase();
+      if (q && !haystack.includes(q)) return false;
+
+      if (active.length) {
+        const categoryMatch = active.some(filter => {
+          if (filter === 'renewal') return notice.category === 'renewal';
+          if (filter === 'recruitment') return notice.category === 'recruitment';
+          if (filter === 'holiday') return notice.category === 'holiday';
+          if (filter === 'this-month') return notice.category === 'this-month';
+          return haystack.includes(filter);
+        });
+        if (!categoryMatch) return false;
+      }
+
+      return true;
+    });
+
+    currentPage = 1;
+    render();
+  }
+
+  function render() {
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+    currentPage = Math.min(currentPage, totalPages);
+
+    const pageNotices = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+
+    if (pageNotices.length === 0) {
+      grid.innerHTML = '';
+      emptyState.classList.remove('hidden');
+    } else {
+      emptyState.classList.add('hidden');
+      grid.innerHTML = pageNotices.map(notice => `
+        <a href="/notices/${notice.id}/"
+           class="notice-card block bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden cursor-pointer"
+           data-title="${(notice.title || '').toLowerCase()}">
+          <div class="h-20 bg-brand-blue relative overflow-hidden"></div>
+          <div class="p-4">
+            <p class="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">${notice.title}</p>
+            <p class="text-xs text-gray-500 mt-2">${notice.posted_at}</p>
+            <p class="text-sm text-gray-600 mt-2 line-clamp-2">${notice.description}</p>
+          </div>
+        </a>`).join('');
+    }
+
+    renderPagination(totalPages);
+  }
+
+  function renderPagination(totalPages) {
+    paginationEl.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    function mkBtn(label, page, disabled, active) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = label;
+      btn.disabled = disabled;
+      btn.className = 'page-btn px-3 py-1.5 text-sm rounded border transition-colors ' +
+        (active ? 'active border-brand-blue bg-brand-blue text-white font-bold' :
+         disabled ? 'border-gray-200 bg-white text-gray-400' :
+                    'border-gray-300 bg-white text-gray-700 hover:bg-gray-100');
+      if (!disabled && !active) {
+        btn.addEventListener('click', () => {
+          currentPage = page;
+          render();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      }
+      return btn;
+    }
+
+    function pageRange(cur, total) {
+      if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+      const r = [1];
+      if (cur > 3) r.push('…');
+      for (let p = Math.max(2, cur - 1); p <= Math.min(total - 1, cur + 1); p++) r.push(p);
+      if (cur < total - 2) r.push('…');
+      r.push(total);
+      return r;
+    }
+
+    paginationEl.appendChild(mkBtn('← Prev', currentPage - 1, currentPage === 1, false));
+
+    pageRange(currentPage, totalPages).forEach(page => {
+      if (page === '…') {
+        const span = document.createElement('span');
+        span.textContent = '…';
+        span.className = 'px-2 text-sm text-gray-400';
+        paginationEl.appendChild(span);
+      } else {
+        paginationEl.appendChild(mkBtn(page, page, false, page === currentPage));
+      }
+    });
+
+    paginationEl.appendChild(mkBtn('Next →', currentPage + 1, currentPage === totalPages, false));
+  }
+
+  filterBtn.addEventListener('click', e => { e.stopPropagation(); filterDropdown.classList.toggle('open'); });
+  filterCloseBtn.addEventListener('click', () => filterDropdown.classList.remove('open'));
+  document.addEventListener('click', () => filterDropdown.classList.remove('open'));
+  filterDropdown.addEventListener('click', e => e.stopPropagation());
+
+  searchInput.addEventListener('input', applyFilters);
+  searchBtn.addEventListener('click', applyFilters);
+  filterChecks.forEach(check => check.addEventListener('change', applyFilters));
+
+  filtered = [...allNotices];
+  render();
+})();
 </script>
 {% endblock %}
