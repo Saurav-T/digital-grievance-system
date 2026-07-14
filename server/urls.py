@@ -32,4 +32,12 @@ urlpatterns = [
     # Jobs
     path("jobs/", views.jobs, name="jobs"),
     path("jobs/<int:pk>/json/", views.job_json, name="job_json"),
+
+     path('carousel/upload/',          views.carousel_upload,  name='carousel_upload'),
+    path('carousel/<int:pk>/delete/', views.carousel_delete,  name='carousel_delete'),
+    path('carousel/reorder/',         views.carousel_reorder, name='carousel_reorder'),
+    path('carousel/api/',             views.carousel_api,     name='carousel_api'),
+
+    # Admin profile
+    path('profile/', views.admin_profile, name='admin_profile'),
 ]
