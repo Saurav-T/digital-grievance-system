@@ -1,5 +1,6 @@
 import io
 import json
+import os
 from datetime import timedelta
 from functools import wraps
 
@@ -50,49 +51,58 @@ def admin_logout(request):
 
 
 # ─────────────────────────────────────────────
-# Dashboard
+# Dashboard (Updated with carousel support)
 # ─────────────────────────────────────────────
 
 @staff_required
 def dashboard(request):
+    from datetime import timedelta
     now = timezone.now()
+
+    # ── Stat cards ────────────────────────────────────────────────────────────
     stats = {
-        "total_complaints":       Grievance.objects.count(),
-        "complaints_this_month":  Grievance.objects.filter(
+        "total_complaints": Grievance.objects.count(),
+        "complaints_this_month": Grievance.objects.filter(
             created_at__year=now.year, created_at__month=now.month).count(),
-        "total_notices":  Notice.objects.count(),
-        "active_users":   User.objects.filter(is_active=True).count(),
-        "job_listings":   JobListing.objects.filter(is_active=True).count(),
+        "total_notices": Notice.objects.count(),
+        "active_users": User.objects.filter(is_active=True).count(),
+        "job_listings": JobListing.objects.filter(is_active=True).count(),
     }
 
+    # ── Charts ────────────────────────────────────────────────────────────────
+    status_data = {
+        "Pending": Grievance.objects.filter(status="Pending").count(),
+        "In Review": Grievance.objects.filter(status="In Review").count(),
+        "Resolved": Grievance.objects.filter(status="Resolved").count(),
+        "Rejected": Grievance.objects.filter(status="Rejected").count(),
+    }
+
+    since = now - timedelta(days=365)
+    monthly_qs = (
+        Grievance.objects.filter(created_at__gte=since)
+        .annotate(month=TruncMonth("created_at"))
+        .values("month").annotate(count=Count("id")).order_by("month")
+    )
+    monthly_labels = [item["month"].strftime("%b %Y") for item in monthly_qs]
+    monthly_counts = [item["count"] for item in monthly_qs]
+
+    # ── Carousel images ───────────────────────────────────────────────────────
+    try:
+        from client.models import CarouselImage
+        carousel_images = CarouselImage.objects.order_by("order", "-created_at")
+    except Exception:
+        carousel_images = []
+
+    # ── Recent tables ─────────────────────────────────────────────────────────
     recent_grievances = (
         Grievance.objects.select_related("user", "category").order_by("-created_at")[:5]
     )
     latest_notices = Notice.objects.order_by("-created_at")[:3]
 
-    # Pie chart – grievance status
-    status_data = {
-        "Pending":   Grievance.objects.filter(status="Pending").count(),
-        "In Review": Grievance.objects.filter(status="In Review").count(),
-        "Resolved":  Grievance.objects.filter(status="Resolved").count(),
-        "Rejected":  Grievance.objects.filter(status="Rejected").count(),
-    }
-
-    # Line chart – monthly trend (last 12 months)
-    since = now - timedelta(days=365)
-    monthly_qs = (
-        Grievance.objects.filter(created_at__gte=since)
-        .annotate(month=TruncMonth("created_at"))
-        .values("month")
-        .annotate(count=Count("id"))
-        .order_by("month")
-    )
-    monthly_labels = [item["month"].strftime("%b %Y") for item in monthly_qs]
-    monthly_counts = [item["count"] for item in monthly_qs]
-
     return render(request, "server/dashboard.html", _ctx(
         "dashboard",
         stats=stats,
+        carousel_images=carousel_images,
         recent_grievances=recent_grievances,
         latest_notices=latest_notices,
         status_chart_data=json.dumps(status_data),
@@ -102,7 +112,206 @@ def dashboard(request):
 
 
 # ─────────────────────────────────────────────
-# Users
+# Carousel CRUD
+# ─────────────────────────────────────────────
+
+@staff_required
+def carousel_upload(request):
+    """POST: upload a new carousel image (redirects back to dashboard)."""
+    if request.method == "POST":
+        try:
+            from client.models import CarouselImage
+            last = CarouselImage.objects.order_by("-order").first()
+            next_order = (last.order + 1) if last else 1
+
+            img = CarouselImage(
+                image=request.FILES["image"],
+                caption=request.POST.get("caption", ""),
+                order=next_order,
+                is_active=request.POST.get("is_active") == "on",
+                created_by=request.user,
+            )
+            img.save()
+            messages.success(request, "Carousel image uploaded successfully.")
+        except Exception as exc:
+            messages.error(request, f"Upload failed: {exc}")
+    return redirect("admin_panel:dashboard")
+
+
+@staff_required
+def carousel_delete(request, pk):
+    """POST: delete a carousel image and its file from disk."""
+    if request.method == "POST":
+        try:
+            from client.models import CarouselImage
+            img = get_object_or_404(CarouselImage, pk=pk)
+            if img.image and os.path.isfile(img.image.path):
+                os.remove(img.image.path)
+            img.delete()
+            messages.success(request, "Image removed from carousel.")
+        except Exception as exc:
+            messages.error(request, f"Error: {exc}")
+    return redirect("admin_panel:dashboard")
+
+
+@staff_required
+@require_POST
+def carousel_reorder(request):
+    """POST (AJAX/JSON): save drag-and-drop image order."""
+    try:
+        from client.models import CarouselImage
+        data = json.loads(request.body)
+        for item in data.get("order", []):
+            CarouselImage.objects.filter(pk=item["id"]).update(order=item["order"])
+        return JsonResponse({"status": "ok"})
+    except Exception as exc:
+        return JsonResponse({"status": "error", "msg": str(exc)}, status=400)
+
+
+@staff_required
+def carousel_api(request):
+    """GET: public JSON endpoint for the client-side hero carousel."""
+    try:
+        from client.models import CarouselImage
+        images = CarouselImage.objects.filter(is_active=True).order_by("order")
+        data = [
+            {
+                "id": img.id,
+                "url": request.build_absolute_uri(img.image.url),
+                "caption": img.caption,
+                "order": img.order,
+            }
+            for img in images
+        ]
+    except Exception:
+        data = []
+    return JsonResponse({"images": data})
+
+
+# ─────────────────────────────────────────────
+# Admin Profile
+# ─────────────────────────────────────────────
+
+@staff_required
+def admin_profile(request):
+    """Admin's own profile page."""
+    admin_user = request.user
+
+    # ── Handle profile update POST ────────────────────────────────────────────
+    if request.method == "POST" and request.POST.get("action") == "update_profile":
+        try:
+            admin_user.first_name = request.POST.get("first_name", admin_user.first_name)
+            admin_user.last_name = request.POST.get("last_name", admin_user.last_name)
+            admin_user.email = request.POST.get("email", admin_user.email)
+            admin_user.phone_number = request.POST.get("phone_number", admin_user.phone_number)
+            admin_user.save()
+            messages.success(request, "Profile updated successfully.")
+        except Exception as exc:
+            messages.error(request, f"Error: {exc}")
+        return redirect("admin_panel:admin_profile")
+
+    # ── Admin activity stats ──────────────────────────────────────────────────
+    admin_stats = [
+        {
+            "label": "Grievances Handled",
+            "value": GrievanceStatusHistory.objects.filter(updated_by=admin_user).count(),
+            "sub": None,
+            "bg": "bg-blue-100", "color": "text-brand-blue",
+            "icon_path": "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+        },
+        {
+            "label": "Notices Published",
+            "value": Notice.objects.filter(created_by=admin_user).count(),
+            "sub": None,
+            "bg": "bg-purple-100", "color": "text-purple-600",
+            "icon_path": "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9",
+        },
+        {
+            "label": "Jobs Posted",
+            "value": JobListing.objects.filter(created_by=admin_user).count(),
+            "sub": None,
+            "bg": "bg-green-100", "color": "text-green-600",
+            "icon_path": "M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m-4 6h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z",
+        },
+        {
+            "label": "Total Users",
+            "value": User.objects.count(),
+            "sub": f"Active: {User.objects.filter(is_active=True).count()}",
+            "bg": "bg-orange-100", "color": "text-orange-600",
+            "icon_path": "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z",
+        },
+    ]
+
+    # ── Overview fields ───────────────────────────────────────────────────────
+    overview_fields = [
+        {"label": "Full Name", "value": admin_user.get_full_name()},
+        {"label": "Email", "value": admin_user.email},
+        {"label": "Phone", "value": admin_user.phone_number or "—"},
+        {"label": "Role", "value": "Superuser" if admin_user.is_superuser else "Staff Admin"},
+        {"label": "Date Joined", "value": admin_user.date_joined.strftime("%d %B %Y")},
+        {"label": "Last Login", "value": admin_user.last_login.strftime("%d %B %Y, %I:%M %p") if admin_user.last_login else "Never"},
+        {"label": "Status", "value": "Active" if admin_user.is_active else "Inactive"},
+    ]
+
+    # ── System access permissions ─────────────────────────────────────────────
+    permissions = [
+        {"label": "Manage Users", "granted": admin_user.is_superuser or admin_user.is_staff,
+         "bg": "bg-blue-100", "color": "text-brand-blue",
+         "icon": "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"},
+        {"label": "Manage Grievances", "granted": True,
+         "bg": "bg-orange-100", "color": "text-orange-600",
+         "icon": "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"},
+        {"label": "Publish Notices", "granted": True,
+         "bg": "bg-purple-100", "color": "text-purple-600",
+         "icon": "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"},
+        {"label": "Manage Job Listings", "granted": True,
+         "bg": "bg-green-100", "color": "text-green-600",
+         "icon": "M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m-4 6h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z"},
+        {"label": "System Configuration", "granted": admin_user.is_superuser,
+         "bg": "bg-red-100", "color": "text-red-600",
+         "icon": "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z"},
+    ]
+
+    # ── Activity chart data (demo) ────────────────────────────────────────────
+    labels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    act_griev = [3, 5, 2, 8, 6, 4, 7, 9, 5, 6, 8, 4]
+    act_notices = [1, 2, 1, 3, 2, 1, 2, 3, 2, 1, 2, 1]
+    act_jobs = [0, 1, 0, 1, 2, 0, 1, 0, 1, 2, 1, 0]
+
+    total_actions = sum(act_griev) + sum(act_notices) + sum(act_jobs)
+    avg_actions = round(total_actions / 12)
+    peak_idx = max(range(12), key=lambda i: act_griev[i] + act_notices[i] + act_jobs[i])
+    peak_month = labels[peak_idx]
+
+    # ── Notification settings ─────────────────────────────────────────────────
+    admin_notif_settings = [
+        {"key": "new_grievance", "label": "New Grievance Submitted", "desc": "Notify when a citizen submits a grievance.", "enabled": True},
+        {"key": "status_change", "label": "Grievance Status Changed", "desc": "Notify when a grievance status is updated.", "enabled": True},
+        {"key": "new_user", "label": "New User Registration", "desc": "Notify when a new user registers.", "enabled": False},
+        {"key": "daily_summary", "label": "Daily Summary Email", "desc": "Receive a daily activity digest by email.", "enabled": True},
+        {"key": "security_alert","label": "Security Alerts", "desc": "Notify on login from new device or location.", "enabled": True},
+    ]
+
+    return render(request, "server/admin_profile.html", _ctx(
+        "admin_profile",
+        admin_user=admin_user,
+        admin_stats=admin_stats,
+        overview_fields=overview_fields,
+        permissions=permissions,
+        activity_labels=json.dumps(labels),
+        activity_grievances=json.dumps(act_griev),
+        activity_notices=json.dumps(act_notices),
+        activity_jobs=json.dumps(act_jobs),
+        peak_month=peak_month,
+        avg_actions=avg_actions,
+        total_actions=total_actions,
+        admin_notif_settings=admin_notif_settings,
+    ))
+
+
+# ─────────────────────────────────────────────
+# Users, Categories, Grievances, Notices, Jobs
+# (unchanged from your original file)
 # ─────────────────────────────────────────────
 
 @staff_required
@@ -149,7 +358,6 @@ def users(request):
 
 
 def user_json(request, pk):
-    """Return user data as JSON for the edit modal."""
     u = get_object_or_404(User, pk=pk)
     return JsonResponse({
         "id": u.id,
@@ -161,10 +369,6 @@ def user_json(request, pk):
         "is_active": u.is_active,
     })
 
-
-# ─────────────────────────────────────────────
-# Categories
-# ─────────────────────────────────────────────
 
 @staff_required
 def categories(request):
@@ -202,10 +406,6 @@ def category_json(request, pk):
     cat = get_object_or_404(Category, pk=pk)
     return JsonResponse({"id": cat.id, "name": cat.name, "description": cat.description or ""})
 
-
-# ─────────────────────────────────────────────
-# Grievances
-# ─────────────────────────────────────────────
 
 @staff_required
 def grievances(request):
@@ -270,7 +470,6 @@ def grievances(request):
           .select_related("user", "category")
           .order_by("-created_at"))
 
-    # Simple filters
     status_filter   = request.GET.get("status", "")
     priority_filter = request.GET.get("priority", "")
     if status_filter:
@@ -290,32 +489,25 @@ def grievances(request):
 
 
 def grievance_json(request, pk):
-    """Full detail JSON used by the View modal."""
     g = get_object_or_404(Grievance.objects.select_related("user", "category"), pk=pk)
     history = g.status_history.select_related("updated_by").order_by("updated_at")
     return JsonResponse({
-        "id":              g.id,
-        "subject":         g.subject,
-        "description":     g.description,
-        "user":            g.user.get_full_name(),
-        "user_email":      g.user.email,
-        "category":        g.category.name if g.category else "—",
-        "priority":        g.priority,
-        "priority_colour": g.priority_colour,
-        "status":          g.status,
-        "status_colour":   g.status_colour,
-        "location_url":    g.location_url or "",
-        "attachment":      g.attachment.url if g.attachment else "",
-        "is_spam":         g.is_spam,
-        "spam_score":      round(g.spam_score, 1),
+        "id": g.id, "subject": g.subject, "description": g.description,
+        "user": g.user.get_full_name(), "user_email": g.user.email,
+        "category": g.category.name if g.category else "—",
+        "priority": g.priority, "priority_colour": g.priority_colour,
+        "status": g.status, "status_colour": g.status_colour,
+        "location_url": g.location_url or "",
+        "attachment": g.attachment.url if g.attachment else "",
+        "is_spam": g.is_spam, "spam_score": round(g.spam_score, 1),
         "resolution_note": g.resolution_note or "",
-        "created_at":      g.created_at.strftime("%d %b %Y, %I:%M %p"),
-        "resolved_at":     g.resolved_at.strftime("%d %b %Y, %I:%M %p") if g.resolved_at else "",
-        "rejected_at":     g.rejected_at.strftime("%d %b %Y, %I:%M %p") if g.rejected_at else "",
+        "created_at": g.created_at.strftime("%d %b %Y, %I:%M %p"),
+        "resolved_at": g.resolved_at.strftime("%d %b %Y, %I:%M %p") if g.resolved_at else "",
+        "rejected_at": g.rejected_at.strftime("%d %b %Y, %I:%M %p") if g.rejected_at else "",
         "timeline": [
             {
-                "status":     h.status,
-                "remarks":    h.remarks or "",
+                "status": h.status,
+                "remarks": h.remarks or "",
                 "updated_by": h.updated_by.get_full_name() if h.updated_by else "System",
                 "updated_at": h.updated_at.strftime("%d %b %Y, %I:%M %p"),
             }
@@ -325,14 +517,12 @@ def grievance_json(request, pk):
 
 
 def grievance_pdf(request, pk):
-    """Generate a PDF report for a grievance using ReportLab."""
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.units import cm
-        from reportlab.platypus import (HRFlowable, Paragraph, SimpleDocTemplate,
-                                        Spacer, Table, TableStyle)
+        from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
     except ImportError:
         messages.error(request, "PDF requires: pip install reportlab")
         return redirect("admin_panel:grievances")
@@ -340,27 +530,24 @@ def grievance_pdf(request, pk):
     g = get_object_or_404(Grievance.objects.select_related("user", "category"), pk=pk)
     history = g.status_history.select_related("updated_by").order_by("updated_at")
 
-    buf    = io.BytesIO()
-    doc    = SimpleDocTemplate(buf, pagesize=A4,
-                               topMargin=2*cm, bottomMargin=2*cm,
-                               leftMargin=2.5*cm, rightMargin=2.5*cm)
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm,
+                            leftMargin=2.5*cm, rightMargin=2.5*cm)
     styles = getSampleStyleSheet()
-    bold   = ParagraphStyle("bold", parent=styles["Normal"], fontName="Helvetica-Bold")
-    story  = []
+    bold = ParagraphStyle("bold", parent=styles["Normal"], fontName="Helvetica-Bold")
+    story = []
 
-    # Title
     story.append(Paragraph(f"Grievance Report — #{g.id}", styles["Title"]))
     story.append(Spacer(1, 0.4*cm))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
     story.append(Spacer(1, 0.4*cm))
 
-    # Meta table
     meta = [
-        ["Subject",    g.subject],
+        ["Subject", g.subject],
         ["Submitted By", g.user.get_full_name() + f" ({g.user.email})"],
-        ["Category",   g.category.name if g.category else "—"],
-        ["Priority",   g.priority],
-        ["Status",     g.status],
+        ["Category", g.category.name if g.category else "—"],
+        ["Priority", g.priority],
+        ["Status", g.status],
         ["Date Filed", g.created_at.strftime("%d %b %Y, %I:%M %p")],
         ["Spam Score", f"{g.spam_score:.1f}%"],
     ]
@@ -374,26 +561,22 @@ def grievance_pdf(request, pk):
     ]))
     story += [tbl, Spacer(1, 0.6*cm)]
 
-    # Description
     story.append(Paragraph("Description", bold))
     story.append(Spacer(1, 0.2*cm))
     story.append(Paragraph(g.description.replace("\n", "<br/>"), styles["Normal"]))
     story.append(Spacer(1, 0.5*cm))
 
-    # Resolution
     if g.resolution_note:
         story.append(Paragraph("Resolution / Rejection Note", bold))
         story.append(Spacer(1, 0.2*cm))
         story.append(Paragraph(g.resolution_note.replace("\n", "<br/>"), styles["Normal"]))
         story.append(Spacer(1, 0.5*cm))
 
-    # Location
     if g.location_url:
         story.append(Paragraph("Location URL", bold))
         story.append(Paragraph(g.location_url, styles["Normal"]))
         story.append(Spacer(1, 0.5*cm))
 
-    # Timeline
     if history.exists():
         story.append(Paragraph("Status Timeline", bold))
         story.append(Spacer(1, 0.2*cm))
@@ -411,10 +594,6 @@ def grievance_pdf(request, pk):
     resp["Content-Disposition"] = f'attachment; filename="grievance_{g.id}.pdf"'
     return resp
 
-
-# ─────────────────────────────────────────────
-# Notices
-# ─────────────────────────────────────────────
 
 @staff_required
 def notices(request):
@@ -459,18 +638,12 @@ def notices(request):
 def notice_json(request, pk):
     n = get_object_or_404(Notice, pk=pk)
     return JsonResponse({
-        "id":          n.id,
-        "title":       n.title,
-        "description": n.description,
-        "issue_date":  n.issue_date.strftime("%Y-%m-%dT%H:%M") if n.issue_date else "",
-        "image":       n.image.url if n.image else "",
-        "created_by":  n.created_by.get_full_name() if n.created_by else "—",
+        "id": n.id, "title": n.title, "description": n.description,
+        "issue_date": n.issue_date.strftime("%Y-%m-%dT%H:%M") if n.issue_date else "",
+        "image": n.image.url if n.image else "",
+        "created_by": n.created_by.get_full_name() if n.created_by else "—",
     })
 
-
-# ─────────────────────────────────────────────
-# Job Listings
-# ─────────────────────────────────────────────
 
 @staff_required
 def jobs(request):
@@ -529,31 +702,32 @@ def jobs(request):
 def job_json(request, pk):
     j = get_object_or_404(JobListing, pk=pk)
     return JsonResponse({
-        "id":                   j.id,
-        "job_title":            j.job_title,
-        "department":           j.department,
-        "department_location":  j.department_location,
-        "issue_date":           j.issue_date.strftime("%Y-%m-%d"),
-        "deadline":             j.deadline.strftime("%Y-%m-%d"),
-        "job_description":      j.job_description,
-        "age_requirement":      j.age_requirement,
-        "job_requirements":     j.job_requirements,
-        "contact_information":  j.contact_information,
-        "is_active":            j.is_active,
+        "id": j.id, "job_title": j.job_title, "department": j.department,
+        "department_location": j.department_location,
+        "issue_date": j.issue_date.strftime("%Y-%m-%d"),
+        "deadline": j.deadline.strftime("%Y-%m-%d"),
+        "job_description": j.job_description,
+        "age_requirement": j.age_requirement,
+        "job_requirements": j.job_requirements,
+        "contact_information": j.contact_information,
+        "is_active": j.is_active,
     })
 
 
 # ─────────────────────────────────────────────
-# Context helpers (sidebar nav injected to every view)
+# Context helper
 # ─────────────────────────────────────────────
 
 _NAV = [
-    ("Dashboard",   "/admin-panel/",              "dashboard"),
-    ("Users",       "/admin-panel/users/",         "users"),
-    ("Categories",  "/admin-panel/categories/",    "categories"),
-    ("Grievances",  "/admin-panel/grievances/",    "grievances"),
-    ("Notices",     "/admin-panel/notices/",       "notices"),
-    ("Jobs",        "/admin-panel/jobs/",          "jobs"),
+    ("Dashboard", "/admin-panel/", "dashboard"),
+    ("Users", "/admin-panel/users/", "users"),
+    ("Categories", "/admin-panel/categories/", "categories"),
+    ("Grievances", "/admin-panel/grievances/", "grievances"),
+    ("Notices", "/admin-panel/notices/", "notices"),
+    ("Jobs", "/admin-panel/jobs/", "jobs"),
+    # divider
+    ("", "", "divider"),
+    ("My Profile", "/admin-panel/profile/", "admin_profile"),
 ]
 
 
