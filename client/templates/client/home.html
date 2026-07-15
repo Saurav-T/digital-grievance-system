@@ -5,31 +5,6 @@
 
 {% include "client/partials/home/hero_carousel.html" %}
 
-<!-- Quick Actions -->
-<section class="max-w-5xl mx-auto px-4 mt-8 relative z-10">
-    <div class="text-center mb-4">
-        {% include "client/partials/section_heading.html" with text="Quick Actions" %}
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
-        <a href="{% url 'grievances' %}"
-           class="bg-white border border-gray-200 shadow rounded-lg py-2.5 px-2 text-center text-xs sm:text-sm font-semibold text-brand-blue
-                  hover:bg-brand-blue hover:text-white transition-colors">
-            Submit a Grievance
-        </a>
-        <a href="{% url 'grievances' %}"
-           class="bg-white border border-gray-200 shadow rounded-lg py-2.5 px-2 text-center text-xs sm:text-sm font-semibold text-brand-blue
-                  hover:bg-brand-blue hover:text-white transition-colors">
-            Track a Grievance
-        </a>
-        <a href="{% url 'notices' %}"
-           class="bg-white border border-gray-200 shadow rounded-lg py-2.5 px-2 text-center text-xs sm:text-sm font-semibold text-brand-blue
-                  hover:bg-brand-blue hover:text-white transition-colors">
-            View Notices
-        </a>
-    </div>
-</section>
-
 <!-- Latest Notices & Job Listings -->
 <section class="bg-blue-50 mt-10">
     <div class="max-w-5xl mx-auto px-4 py-10 grid grid-cols-1 lg:grid-cols-2 gap-10">
