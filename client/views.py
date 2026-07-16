@@ -2,6 +2,8 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.decorators.clickjacking import xframe_options_exempt
 
+import json  # ← Added as requested
+
 from .generators import (
     generate_notice_pdf,
     generate_notice_docx,
@@ -119,82 +121,58 @@ def login_signup(request):
 
 def home(request):
     notices = [
-        {
-            "title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
-            "posted_at": "June 18, 2026, 09:33 AM",
-        },
-        {
-            "title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
-            "posted_at": "June 18, 2026, 09:33 AM",
-        },
-        {
-            "title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
-            "posted_at": "June 18, 2026, 09:33 AM",
-        },
-        {
-            "title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
-            "posted_at": "June 18, 2026, 09:33 AM",
-        },
+        {"id": 1, "title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
+         "posted_at": "June 18, 2026, 09:33 AM"},
+        {"id": 2, "title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
+         "posted_at": "June 18, 2026, 09:33 AM"},
+        {"id": 3, "title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
+         "posted_at": "June 18, 2026, 09:33 AM"},
+        {"id": 4, "title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
+         "posted_at": "June 18, 2026, 09:33 AM"},
     ]
-
     jobs = [
-        {
-            "title": "Computer Operator",
-            "organization": "Ministry of Education",
-            "location": "Kathmandu, Nepal",
-            "deadline": "30th July, 2026",
-        },
-        {
-            "title": "Computer Operator",
-            "organization": "Ministry of Education",
-            "location": "Kathmandu, Nepal",
-            "deadline": "30th July, 2026",
-        },
-        {
-            "title": "IT Officer",
-            "organization": "Ministry of Home Affairs",
-            "location": "Kathmandu, Nepal",
-            "deadline": "15th August, 2026",
-        },
-        {
-            "title": "Field Surveyor",
-            "organization": "Ministry of Urban Development",
-            "location": "Pokhara, Nepal",
-            "deadline": "5th August, 2026",
-        },
+        {"id": 1, "title": "Computer Operator",
+         "organization": "Ministry of Education",
+         "location": "Kathmandu, Nepal",
+         "deadline": "30th July, 2026"},
+        {"id": 2, "title": "Computer Operator",
+         "organization": "Ministry of Education",
+         "location": "Kathmandu, Nepal",
+         "deadline": "30th July, 2026"},
+        {"id": 3, "title": "IT Officer",
+         "organization": "Ministry of Home Affairs",
+         "location": "Kathmandu, Nepal",
+         "deadline": "15th August, 2026"},
+        {"id": 4, "title": "Field Surveyor",
+         "organization": "Ministry of Urban Development",
+         "location": "Pokhara, Nepal",
+         "deadline": "5th August, 2026"},
     ]
-
     stats = {
         "complaints": 100,
-        "resolved": 100,
-        "active_jobs": 100,
+        "resolved": 82,
+        "active_jobs": 14,
         "notices": 100,
     }
 
-    return render(
-        request,
-        "client/home.html",
-        {
-            "notices": notices,
-            "jobs": jobs,
-            "stats": stats,
-        },
-    )
+    # Marquee: latest notices as clickable {text, url} objects
+    marquee_notices = [
+        {"text": n["title"], "url": f"/notices/{n['id']}/"}
+        for n in notices
+    ]
+    # Pad with a couple of job notices
+    marquee_notices += [
+        {"text": f"Job Opening: {j['title']} – {j['organization']}",
+         "url": f"/jobs/{j['id']}/"}
+        for j in jobs[:2]
+    ]
 
-
-# =============================================================================
-# Placeholder Pages
-# =============================================================================
-
-def placeholder_page(request, page_title, page_description=""):
-    return render(
-        request,
-        "placeholder.html",
-        {
-            "page_title": page_title,
-            "page_description": page_description,
-        },
-    )
+    return render(request, "client/home.html", {
+        "notices": notices,
+        "jobs": jobs,
+        "stats": stats,
+        "marquee_notices_json": json.dumps(marquee_notices, ensure_ascii=False),
+    })
 
 
 # =============================================================================
@@ -203,31 +181,40 @@ def placeholder_page(request, page_title, page_description=""):
 
 def notices(request):
     notices = [
-        {"title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
-            "posted_at": "June 18, 2026, 09:33 AM"},
-        {"title": "अनलाइन उजुरी दर्ता प्रणाली सञ्चालन सम्बन्धी सूचना",
-            "posted_at": "June 17, 2026, 02:15 PM"},
-        {"title": "कम्प्युटर अपरेटर पदको दरखास्त आह्वान सम्बन्धी सूचना",
-            "posted_at": "June 16, 2026, 11:00 AM"},
-        {"title": "गुनासो सुनुवाई कार्यक्रम तालिका प्रकाशन सम्बन्धी सूचना",
-            "posted_at": "June 15, 2026, 04:45 PM"},
-        {"title": "सार्वजनिक बिदाका दिन सेवा उपलब्ध नहुने सम्बन्धी सूचना",
-            "posted_at": "June 14, 2026, 10:20 AM"},
-        {"title": "वेबसाइट अनुसूची अपडेट सम्बन्धी सूचना",
-            "posted_at": "June 13, 2026, 03:30 PM"},
-        {"title": "नतिजा प्रकाशन सम्बन्धी जरुरी सूचना",
-            "posted_at": "June 12, 2026, 08:00 AM"},
-        {"title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
-            "posted_at": "June 11, 2026, 01:10 PM"},
-        {"title": "अनलाइन उजुरी दर्ता प्रणाली सञ्चालन सम्बन्धी सूचना",
-            "posted_at": "June 10, 2026, 09:55 AM"},
+        {"id": 1, "title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
+         "posted_at": "June 18, 2026, 09:33 AM"},
+        {"id": 2, "title": "अनलाइन उजुरी दर्ता प्रणाली सञ्चालन सम्बन्धी सूचना",
+         "posted_at": "June 17, 2026, 02:15 PM"},
+        {"id": 3, "title": "कम्प्युटर अपरेटर पदको दरखास्त आह्वान सम्बन्धी सूचना",
+         "posted_at": "June 16, 2026, 11:00 AM"},
+        {"id": 4, "title": "गुनासो सुनुवाई कार्यक्रम तालिका प्रकाशन सम्बन्धी सूचना",
+         "posted_at": "June 15, 2026, 04:45 PM"},
+        {"id": 5, "title": "सार्वजनिक बिदाका दिन सेवा उपलब्ध नहुने सम्बन्धी सूचना",
+         "posted_at": "June 14, 2026, 10:20 AM"},
+        {"id": 6, "title": "वेबसाइट अनुसूची अपडेट सम्बन्धी सूचना",
+         "posted_at": "June 13, 2026, 03:30 PM"},
+        {"id": 7, "title": "नतिजा प्रकाशन सम्बन्धी जरुरी सूचना",
+         "posted_at": "June 12, 2026, 08:00 AM"},
+        {"id": 8, "title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
+         "posted_at": "June 11, 2026, 01:10 PM"},
+        {"id": 9, "title": "अनलाइन उजुरी दर्ता प्रणाली सञ्चालन सम्बन्धी सूचना",
+         "posted_at": "June 10, 2026, 09:55 AM"},
     ]
 
-    return render(request, "client/notices.html", {"notices": notices})
+    # Build marquee from this page's notices
+    marquee_notices = [
+        {"text": n["title"], "url": f"/notices/{n['id']}/"}
+        for n in notices
+    ]
+
+    return render(request, "client/notices.html", {
+        "notices": notices,
+        "marquee_notices_json": json.dumps(marquee_notices, ensure_ascii=False),
+    })
 
 
 # =============================================================================
-# Notice Detail
+# Notice Detail + PDF/Download
 # =============================================================================
 
 def notice_detail(request, pk):
@@ -349,7 +336,7 @@ def job_download(request, pk):
 
 
 # =============================================================================
-# About / Login
+# About / Login / Profile
 # =============================================================================
 
 def about(request):
@@ -372,6 +359,18 @@ def login_view(request):
         "The login / registration form will live here.",
     )
 
+
+def placeholder_page(request, page_title, page_description=""):
+    return render(
+        request,
+        "placeholder.html",
+        {
+            "page_title": page_title,
+            "page_description": page_description,
+        },
+    )
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Profile view
 # ─────────────────────────────────────────────────────────────────────────────
@@ -380,13 +379,7 @@ def profile(request):
     """
     User profile page.
     TODO (DB): Replace demo data with real queries once User model is linked.
-    Example:
-        user = request.user
-        grievances = Grievance.objects.filter(user=user)
-        saved_notices = user.saved_notices.all()
     """
-    # ── Demo profile data ─────────────────────────────────────────────────────
-    # TODO: Replace with request.user fields
     demo_profile = {
         "name":     "User Name",
         "email":    "username@gmail.com",
@@ -398,7 +391,6 @@ def profile(request):
         "joined":   "June 2026",
     }
 
-    # ── Personal tab fields ───────────────────────────────────────────────────
     personal_fields = [
         {"label": "Full Name",     "value": demo_profile["name"]},
         {"label": "Email",         "value": demo_profile["email"]},
@@ -410,8 +402,6 @@ def profile(request):
         {"label": "Member Since",  "value": demo_profile["joined"]},
     ]
 
-    # ── Insights ──────────────────────────────────────────────────────────────
-    # TODO: Compute from real DB aggregates
     insights = [
         {"icon": "📅", "text": "You submit most grievances on Mondays."},
         {"icon": "🛣️", "text": "Road-related issues are your most common reports."},
@@ -420,8 +410,6 @@ def profile(request):
         {"icon": "👀", "text": "You viewed 3× more job notices than scholarship notices."},
     ]
 
-    # ── Notice interest analysis ──────────────────────────────────────────────
-    # TODO: Compute from Notice view-click records per user
     notice_interests = [
         {"label": "Jobs",        "pct": 45},
         {"label": "Government",  "pct": 25},
@@ -429,16 +417,12 @@ def profile(request):
         {"label": "Events",      "pct": 10},
     ]
 
-    # ── Trend analytics ───────────────────────────────────────────────────────
-    # TODO: Compare current month vs previous month from DB
     trends = [
         {"label": "Notices Viewed",        "value": "+21%", "positive": True},
         {"label": "Grievances Submitted",  "value": "-15%", "positive": False},
         {"label": "Resolution Rate",       "value": "+12%", "positive": True},
     ]
 
-    # ── Saved items ───────────────────────────────────────────────────────────
-    # TODO: Replace with user.saved_notices.all() and user.saved_jobs.all()
     saved_notices = [
         {"id": 1, "title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
          "date": "June 18, 2026"},
@@ -452,8 +436,6 @@ def profile(request):
          "department": "Ministry of Home Affairs", "deadline": "15 Aug 2026"},
     ]
 
-    # ── Notification settings ─────────────────────────────────────────────────
-    # TODO: Replace with user's notification preferences from DB
     notification_settings = [
         {"key": "new_notice",      "label": "New Notices",          "desc": "Notify when a new notice is published.",          "enabled": True},
         {"key": "grievance_update","label": "Grievance Updates",    "desc": "Notify when your grievance status changes.",      "enabled": True},
@@ -462,8 +444,6 @@ def profile(request):
         {"key": "sms_alerts",      "label": "SMS Alerts",           "desc": "Receive critical updates via SMS.",               "enabled": False},
     ]
 
-    # ── Preference categories ─────────────────────────────────────────────────
-    # TODO: Load user's saved preferences from DB
     preference_categories = [
         {"value": "govt",   "label": "Government Notices",  "selected": True},
         {"value": "job",    "label": "Job Opportunities",   "selected": True},
