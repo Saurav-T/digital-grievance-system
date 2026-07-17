@@ -24,13 +24,23 @@
 </div>
 
 <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="p-4 border-b bg-gray-50">
+        <div class="relative max-w-xs">
+            <svg class="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" id="search-grievances" oninput="filterGrievances()"
+                   placeholder="Search grievances by user, subject or category…"
+                   class="adm-input pl-9 text-sm">
+        </div>
+    </div>
     <div class="overflow-x-auto">
         <table class="w-full admin-table">
             <thead><tr>
                 <th>ID</th><th>User</th><th>Category</th><th>Subject</th>
                 <th>Priority</th><th>Status</th><th>Date</th><th>Actions</th>
             </tr></thead>
-            <tbody>
+            <tbody id="table-grievances-body">
                 {% for g in grievances %}
                 <tr>
                     <td class="font-mono text-xs text-gray-400">#{{ g.id }}</td>
@@ -66,6 +76,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        <p id="no-results-grievances" class="hidden text-center py-8 text-sm text-gray-400">No matching grievances.</p>
     </div>
 </div>
 
@@ -221,6 +232,24 @@ async function loadGrievanceEdit(pk) {
     const sel = document.getElementById('eg-category');
     for (let opt of sel.options) { opt.selected = opt.text === d.category; }
     openModal('modal-edit-griev');
+}
+
+// ── Client-side text search (status/priority already filtered server-side) ──
+function filterGrievances() {
+    var q = document.getElementById('search-grievances').value.trim().toLowerCase();
+    var tbody = document.getElementById('table-grievances-body');
+    if (!tbody) return;
+    var rows = tbody.querySelectorAll('tr');
+    var visibleCount = 0;
+    rows.forEach(function (row) {
+        if (row.children.length === 1) return; // skip empty-state row
+        var text = row.textContent.toLowerCase();
+        var visible = text.indexOf(q) !== -1;
+        row.classList.toggle('hidden', !visible);
+        if (visible) visibleCount++;
+    });
+    var noResultsEl = document.getElementById('no-results-grievances');
+    if (noResultsEl) noResultsEl.classList.toggle('hidden', visibleCount !== 0 || rows.length === 0);
 }
 </script>
 {% endblock %}
