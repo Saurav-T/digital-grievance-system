@@ -37,73 +37,73 @@
 <div class="flex min-h-screen">
 
   <!-- ══ Sidebar ══════════════════════════════════════════════ -->
+  <!-- Fixed to the viewport height on all breakpoints; only the nav list scrolls internally -->
   <aside id="admin-sidebar"
-         class="fixed lg:static top-0 left-0 h-full lg:h-auto w-64 bg-brand-blue text-white
+         class="fixed lg:sticky top-0 left-0 h-screen w-64 bg-brand-blue text-white
                 z-50 transform -translate-x-full lg:translate-x-0 transition-transform
-                duration-300 flex flex-col justify-between flex-shrink-0 shadow-xl lg:shadow-none">
+                duration-300 flex flex-col flex-shrink-0 shadow-xl lg:shadow-none overflow-hidden">
 
-    <!-- Top: title + nav -->
-    <div>
-      <div class="px-6 py-6 border-b border-white/10">
-        <h1 class="text-xl font-extrabold tracking-wide">Admin Panel</h1>
-      </div>
-
-      <nav class="px-3 mt-4">
-        <ul class="space-y-0.5 text-sm">
-          {% for label, url, key in sidebar_nav %}
-          {% if key == 'divider' %}
-          <li class="border-t border-white/10 my-2"></li>
-          {% else %}
-          <li>
-            <a href="{{ url }}"
-               class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg font-semibold
-                      transition-colors hover:bg-white/10
-                      {% if active == key %}bg-white/15{% endif %}">
-
-              <!-- Nav icon -->
-              {% if key == 'dashboard' %}
-              <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h7v7H3zm0 9h7v5H3zm11-9h7v5h-7zm0 7h7v7h-7z"/>
-              </svg>
-              {% elif key == 'users' %}
-              <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-              </svg>
-              {% elif key == 'categories' %}
-              <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/>
-              </svg>
-              {% elif key == 'grievances' %}
-              <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-              {% elif key == 'notices' %}
-              <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-              </svg>
-              {% elif key == 'jobs' %}
-              <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m-4 6h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z"/>
-              </svg>
-              {% elif key == 'admin_profile' %}
-              <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-              </svg>
-              {% else %}
-              <span class="h-4 w-4 flex-shrink-0"></span>
-              {% endif %}
-
-              {{ label }}
-            </a>
-          </li>
-          {% endif %}
-          {% endfor %}
-        </ul>
-      </nav>
+    <!-- Top: title (fixed, never scrolls) -->
+    <div class="px-6 py-6 border-b border-white/10 flex-shrink-0">
+      <h1 class="text-xl font-extrabold tracking-wide">Admin Panel</h1>
     </div>
 
-    <!-- Bottom: logout + branding -->
-    <div class="px-4 pb-6 mt-4">
+    <!-- Middle: nav (scrolls independently when it overflows available height) -->
+    <nav class="px-3 mt-4 flex-1 min-h-0 overflow-y-auto admin-sidebar-nav">
+      <ul class="space-y-0.5 text-sm">
+        {% for label, url, key in sidebar_nav %}
+        {% if key == 'divider' %}
+        <li class="border-t border-white/10 my-2"></li>
+        {% else %}
+        <li>
+          <a href="{{ url }}"
+             class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg font-semibold
+                    transition-colors hover:bg-white/10
+                    {% if active == key %}bg-white/15{% endif %}">
+
+            <!-- Nav icon -->
+            {% if key == 'dashboard' %}
+            <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h7v7H3zm0 9h7v5H3zm11-9h7v5h-7zm0 7h7v7h-7z"/>
+            </svg>
+            {% elif key == 'users' %}
+            <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+            {% elif key == 'categories' %}
+            <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/>
+            </svg>
+            {% elif key == 'grievances' %}
+            <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            {% elif key == 'notices' %}
+            <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            {% elif key == 'jobs' %}
+            <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m-4 6h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z"/>
+            </svg>
+            {% elif key == 'admin_profile' %}
+            <svg class="h-4 w-4 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            {% else %}
+            <span class="h-4 w-4 flex-shrink-0"></span>
+            {% endif %}
+
+            {{ label }}
+          </a>
+        </li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+    </nav>
+
+    <!-- Bottom: logout + branding (fixed, never scrolls) -->
+    <div class="px-4 pb-6 mt-4 flex-shrink-0">
       <a href="{% url 'admin_panel:logout' %}"
          class="block w-full text-center bg-white/10 hover:bg-white/20 rounded-lg
                 py-2.5 text-sm font-semibold mb-5 transition-colors">
@@ -152,6 +152,27 @@
     </div>
   </div>
 </div>
+
+<style>
+  /* Thin, unobtrusive scrollbar for the sidebar nav only */
+  .admin-sidebar-nav {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.25) transparent;
+  }
+  .admin-sidebar-nav::-webkit-scrollbar {
+    width: 6px;
+  }
+  .admin-sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .admin-sidebar-nav::-webkit-scrollbar-thumb {
+    background-color: rgba(255,255,255,0.25);
+    border-radius: 3px;
+  }
+  .admin-sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255,255,255,0.4);
+  }
+</style>
 
 <script src="{% static 'server/js/admin_sidebar.js' %}"></script>
 <script src="{% static 'server/js/admin.js' %}"></script>
