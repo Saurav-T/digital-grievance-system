@@ -1,126 +1,80 @@
 {% extends "client/base.html" %}
 {% load static %}
 
-{% block content %}
+{% block title %}Track Grievances | Digital Grievance and Notice Board System{% endblock %}
 
-<style>
-    .container{
-        padding: 14px 50px;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        font-family: Arial, Helvetica, sans-serif;
-    }
-    .container h2{
-        color: #1d4ea5;
-    }
-    .grievances{
-        display: flex;
-        gap: 10px;
-    }
-    .grievance{
-        border-radius: 10px;
-        background-color: #ececec;
-        padding: 15px 50px;
-        text-decoration: none;
-        color: black;
-    }
-    .active{
-        background-color: #1d4ea5;
-        color: white;
-    }
-    .top{
-        display: flex;
-        justify-content: space-between;
-    }
-    .search{
-        gap: 10px;
-    }
-    .search-box{
-        padding: 10px 50px;
-        border: none;
-        background-color:  #ececec;
-        border-radius: 10px;
-    }
-    .search-btn{
-        background-color: #1d4ea5;
-        color: white;
-        padding: 10px 30px;
-        border: none;
-        border-radius: 10px;
-    }
-    .filter{
-        padding: 5px;
-        border: none;
-        background-color: #ececec;
-        color: black;
-        border-radius: 10px;
-    }
-    .track-grievance{
-        width: 100%;
-        border-collapse: collapse;
-        border: 2px solid #999;
-    }
-    .track-grievance th,
-    .track-grievance td {
-        border: 1px solid #999;
-        padding: 10px;
-        text-align: center;
-        font-size: 14px;
-    }
-    .track-grievance th{
-        background-color: #f5f5f5;
-        font-weight: bold;
-    }
-</style>
-<div class="container">
-    <h2>Grievances</h2>
-    <div class="grievances">
-        <a href="" class="grievance">
-            Issue Grievances
+{% block content %}
+<div class="px-6 pt-3 pb-4">
+    <nav class="text-sm mb-3">
+        <a href="#" class="text-brand-blue underline underline-offset-2">Grievances</a>
+    </nav>
+
+    <div class="flex gap-3 mb-4">
+        <a href="{% url 'grievance_create' %}">
+            <button class="bg-gray-205 text-gray-805 text-sm font-semibold px-5 py-2 rounded-md shadow hover:bg-gray-300 transition">
+                Issue Grievance
+            </button>
         </a>
-        <a href="" class="grievance active">
-            Track Grievances
-        </a>
+
+         <a href="{% url 'track_grievance' %}">
+            <button type="button" class="bg-gray-205 text-gray-805 text-sm font-semibold px-5 py-2 rounded-md shadow hover:bg-gray-300 transition">
+                Track Grievances
+            </button>
     </div>
-    <div class="top">
-        <div class="search">
-            <input type="text" placeholder="Search" class="search-box">
-            <button class="search-btn">Search</button> 
+
+    <!-- Search & Filter Bar -->
+    <form method="get" action="{% url 'track_grievance' %}" class="flex items-center gap-3 mb-4">
+        <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Search"
+               class="flex-1 bg-gray-100 border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
+        <button type="submit"
+                class="bg-brand-blue text-white text-sm font-semibold px-6 py-2 rounded-md shadow hover:bg-brand-blue-dark transition">
+            Search
+        </button>
+
+        <div class="relative ml-auto">
+            <select name="filter" onchange="this.form.submit()"
+                    class="bg-gray-100 border border-gray-300 rounded-md pl-3 pr-8 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-blue appearance-none cursor-pointer">
+                <option value="">Filter</option>
+                <option value="pending" {% if request.GET.filter == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="in_progress" {% if request.GET.filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                <option value="resolved" {% if request.GET.filter == 'resolved' %}selected{% endif %}>Resolved</option>
+                <option value="rejected" {% if request.GET.filter == 'rejected' %}selected{% endif %}>Rejected</option>
+            </select>
         </div>
-        <select class="filter">
-            <option>Filter</option>
-            <option>Pending</option>
-            <option>Solved</option>
-        </select>
-    </div>
-    <table class="track-grievance">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Subject</th>
-                <th>Category</th>
-                <th>Priority</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for grievance in grievances %}
-            <tr>
-                <td>{{ grievance.id }}</td>
-                <td>{{ grievance.subject }}</td>
-                <td>{{ grievance.category }}</td>
-                <td>{{ grievance.priority }}</td>
-                <td>{{ grievance.status }}</td>
-            </tr>
+    </form>
+
+    <!-- Grievances Table -->
+    <div class="overflow-x-auto">
+        <table class="w-full border border-gray-300 text-sm">
+            <thead>
+                <tr class="bg-white">
+                    <th class="border border-gray-300 px-3 py-2 text-center font-semibold text-gray-800">ID</th>
+                    <th class="border border-gray-300 px-3 py-2 text-center font-semibold text-gray-800">Subject</th>
+                    <th class="border border-gray-300 px-3 py-2 text-center font-semibold text-gray-800">Category</th>
+                    <th class="border border-gray-300 px-3 py-2 text-center font-semibold text-gray-800">Priority</th>
+                    <th class="border border-gray-300 px-3 py-2 text-center font-semibold text-gray-800">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for grievance in grievances %}
+                <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location.href='{% url 'grievance_detail' grievance.id %}'">
+                    <td class="border border-gray-300 px-3 py-2 text-center text-gray-700">{{ grievance.id }}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center text-gray-700">{{ grievance.subject }}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center text-gray-700">{{ grievance.get_category_display }}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center text-gray-700">{{ grievance.get_priority_display }}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center text-gray-700">{{ grievance.get_status_display }}</td>
+                </tr>
                 {% empty %}
-            <tr>
-                <td colspan="5" class="empty">
-                    No Grievances found.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                <tr>
+                    <td class="border border-gray-300 px-3 py-2 text-center text-gray-400" colspan="1">&nbsp;</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center text-gray-400"></td>
+                    <td class="border border-gray-300 px-3 py-2 text-center text-gray-400"></td>
+                    <td class="border border-gray-300 px-3 py-2 text-center text-gray-400"></td>
+                    <td class="border border-gray-300 px-3 py-2 text-center text-gray-400"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}
