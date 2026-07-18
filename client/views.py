@@ -1,6 +1,11 @@
-from django.shortcuts import render
+import json
+
+from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponse
 from django.views.decorators.clickjacking import xframe_options_exempt
+from django.utils import timezone
+
+from .models import Notice
 
 from .generators import (
     generate_notice_pdf,
@@ -202,28 +207,25 @@ def placeholder_page(request, page_title, page_description=""):
 # =============================================================================
 
 def notices(request):
-    notices = [
-        {"title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
-            "posted_at": "June 18, 2026, 09:33 AM"},
-        {"title": "अनलाइन उजुरी दर्ता प्रणाली सञ्चालन सम्बन्धी सूचना",
-            "posted_at": "June 17, 2026, 02:15 PM"},
-        {"title": "कम्प्युटर अपरेटर पदको दरखास्त आह्वान सम्बन्धी सूचना",
-            "posted_at": "June 16, 2026, 11:00 AM"},
-        {"title": "गुनासो सुनुवाई कार्यक्रम तालिका प्रकाशन सम्बन्धी सूचना",
-            "posted_at": "June 15, 2026, 04:45 PM"},
-        {"title": "सार्वजनिक बिदाका दिन सेवा उपलब्ध नहुने सम्बन्धी सूचना",
-            "posted_at": "June 14, 2026, 10:20 AM"},
-        {"title": "वेबसाइट अनुसूची अपडेट सम्बन्धी सूचना",
-            "posted_at": "June 13, 2026, 03:30 PM"},
-        {"title": "नतिजा प्रकाशन सम्बन्धी जरुरी सूचना",
-            "posted_at": "June 12, 2026, 08:00 AM"},
-        {"title": "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
-            "posted_at": "June 11, 2026, 01:10 PM"},
-        {"title": "अनलाइन उजुरी दर्ता प्रणाली सञ्चालन सम्बन्धी सूचना",
-            "posted_at": "June 10, 2026, 09:55 AM"},
+    notices = Notice.objects.order_by("-issue_date", "-created_at")
+    notice_payload = [
+        {
+            "id": notice.id,
+            "title": notice.title,
+            "posted_at": notice.issue_date.strftime("%B %d, %Y, %I:%M %p") if notice.issue_date else "",
+            "category": "general",
+            "description": notice.description,
+        }
+        for notice in notices
     ]
 
-    return render(request, "client/notices.html", {"notices": notices})
+    return render(request, "client/notices.html", {
+        "notices": notice_payload,
+        "marquee_notices_json": json.dumps(
+            [{"text": n["title"], "url": f"/notices/{n['id']}/"} for n in notice_payload],
+            ensure_ascii=False,
+        ),
+    })
 
 
 # =============================================================================
@@ -231,27 +233,49 @@ def notices(request):
 # =============================================================================
 
 def notice_detail(request, pk):
-    notice = EXAMPLE_NOTICE.copy()
-    notice["id"] = pk
+    notice = get_object_or_404(Notice, pk=pk)
+    recent_notices = Notice.objects.exclude(pk=notice.pk).order_by("-issue_date", "-created_at")[:5]
+
+    notice_payload = {
+        "id": notice.id,
+        "title": notice.title,
+        "date": notice.issue_date.strftime("%d/%m/%Y") if notice.issue_date else "",
+        "ministry_name": "",
+        "address": "",
+        "doc_title": notice.title,
+        "doc_date": notice.issue_date.strftime("%d/%m/%Y") if notice.issue_date else "",
+        "body": notice.description,
+        "attached_media": [],
+    }
+
+    recent_payload = [
+        {
+            "id": recent.id,
+            "title": recent.title,
+            "date": recent.issue_date.strftime("%B %d, %Y, %I:%M %p") if recent.issue_date else "",
+        }
+        for recent in recent_notices
+    ]
 
     return render(
         request,
         "client/notice_detail.html",
         {
-            "notice": notice,
-            "recent_notices": EXAMPLE_RECENT_NOTICES,
+            "notice": notice_payload,
+            "recent_notices": recent_payload,
         },
     )
 
 
 @xframe_options_exempt
 def notice_pdf(request, pk):
+    notice = get_object_or_404(Notice, pk=pk)
     ctx = {
-        "ministry_name": EXAMPLE_NOTICE["ministry_name"],
-        "address": EXAMPLE_NOTICE["address"],
-        "title": EXAMPLE_NOTICE["doc_title"],
-        "date": EXAMPLE_NOTICE["doc_date"],
-        "body": EXAMPLE_NOTICE["body"],
+        "ministry_name": "",
+        "address": "",
+        "title": notice.title,
+        "date": notice.issue_date.strftime("%d/%m/%Y") if notice.issue_date else "",
+        "body": notice.description,
     }
 
     pdf = generate_notice_pdf(ctx)
@@ -262,18 +286,19 @@ def notice_pdf(request, pk):
 
 
 def notice_download(request, pk):
+    notice = get_object_or_404(Notice, pk=pk)
     ctx = {
-        "ministry_name": EXAMPLE_NOTICE["ministry_name"],
-        "address": EXAMPLE_NOTICE["address"],
-        "title": EXAMPLE_NOTICE["doc_title"],
-        "date": EXAMPLE_NOTICE["doc_date"],
-        "body": EXAMPLE_NOTICE["body"],
+        "ministry_name": "",
+        "address": "",
+        "title": notice.title,
+        "date": notice.issue_date.strftime("%d/%m/%Y") if notice.issue_date else "",
+        "body": notice.description,
     }
 
-    pdf = generate_notice_pdf(ctx)
+    docx_bytes = generate_notice_docx(ctx)
 
-    response = HttpResponse(pdf, content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="notice_{pk}.pdf"'
+    response = HttpResponse(docx_bytes, content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    response["Content-Disposition"] = f'attachment; filename="notice_{pk}.docx"'
     return response
 
 

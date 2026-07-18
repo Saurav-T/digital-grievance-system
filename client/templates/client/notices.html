@@ -141,19 +141,8 @@
 
   <div id="bm-toast"></div>
 
-  <script id="notice-data" type="application/json">
-  [
-    {"id":1,"title":"नवीकरण तथा बेरुजु रकम दाखिला गर्ने सम्बन्धी सूचना","posted_at":"June 18, 2026, 09:33 AM","category":"renewal","description":"Important reminder for all concerned offices to complete the renewal and fee submission process before the deadline..."},
-    {"id":2,"title":"नयाँ भर्ती सम्बन्धी सूचना","posted_at":"June 14, 2026, 04:10 PM","category":"recruitment","description":"Details regarding the upcoming recruitment process, eligibility requirements, and application timeline..."},
-    {"id":3,"title":"सार्वजनिक बिदा सम्बन्धी सूचना","posted_at":"June 10, 2026, 08:00 AM","category":"holiday","description":"Public holiday notice for administrative offices and public service delivery points across the region..."},
-    {"id":4,"title":"यस महिनाको कार्यसूची अपडेट","posted_at":"June 08, 2026, 11:45 AM","category":"this-month","description":"A short update on the current month’s work schedule and important procedural changes..."},
-    {"id":5,"title":"विभागीय बैठक सम्बन्धी सूचना","posted_at":"June 05, 2026, 02:30 PM","category":"renewal","description":"All department heads are requested to attend the scheduled review meeting with updated documents..."},
-    {"id":6,"title":"अन्तरविभागीय सहकार्य सूचना","posted_at":"June 02, 2026, 01:00 PM","category":"recruitment","description":"Cooperation request between departments for the implementation of the new service procedure..."},
-    {"id":7,"title":"सुरक्षा अभ्यास सम्बन्धी सूचना","posted_at":"May 28, 2026, 03:20 PM","category":"holiday","description":"Reminder for all staff to participate in the scheduled safety drill and follow the instructions..."},
-    {"id":8,"title":"कर्मचारी प्रशिक्षण कार्यक्रम","posted_at":"May 24, 2026, 10:10 AM","category":"this-month","description":"Training schedule and attendance instructions for all current and newly appointed staff members..."},
-    {"id":9,"title":"नवीनतम सूचना प्रकाशन","posted_at":"May 20, 2026, 06:15 PM","category":"renewal","description":"A brief overview of newly published notices and the steps required to access them online..."}
-  ]
-  </script>
+  <script id="notice-data" type="application/json"></script>
+  {{ notices|json_script:"notice-data-json" }}
 </section>
 {% endblock %}
 
@@ -179,7 +168,7 @@
   let currentPage = 1;
 
   try {
-    allNotices = JSON.parse(noticeDataEl.textContent);
+    allNotices = JSON.parse(document.getElementById('notice-data-json').textContent);
   } catch (error) {
     console.error('Notice data error', error);
   }
@@ -199,6 +188,7 @@
     if (saved) { bm.delete(id); showToast(`Removed "${title}" from saved notices`); }
     else { bm.add(id); showToast(`Saved "${title}"`); }
     saveBookmarks(bm);
+    window.dispatchEvent(new CustomEvent('bookmark-updated', { detail: { id, saved: !saved } }));
     return !saved;
   }
 
@@ -355,6 +345,12 @@
   searchInput.addEventListener('input', applyFilters);
   searchBtn.addEventListener('click', applyFilters);
   filterChecks.forEach(check => check.addEventListener('change', applyFilters));
+
+  window.addEventListener('storage', () => render());
+  window.addEventListener('bookmark-updated', () => render());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') render();
+  });
 
   filtered = [...allNotices];
   render();

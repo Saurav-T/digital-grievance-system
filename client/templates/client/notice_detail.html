@@ -333,6 +333,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMediaMo
     else { bm.add(noticeId); showToast(`Saved "${title}"`); }
     saveBookmarks(bm);
     syncBtn();
+    window.dispatchEvent(new CustomEvent('bookmark-updated', { detail: { id: noticeId, saved: !saved } }));
   });
 
   document.querySelectorAll('.save-card-btn').forEach(cardBtn => {
@@ -358,6 +359,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMediaMo
       saveBookmarks(bm);
       syncCardBtn();
       if (btn) syncBtn();
+      window.dispatchEvent(new CustomEvent('bookmark-updated', { detail: { id: cardId, saved: !saved } }));
     });
   });
 })();
