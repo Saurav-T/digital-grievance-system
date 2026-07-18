@@ -20,13 +20,13 @@ TODO (DB): pass JobListing queryset objects directly.
 {% load static %}
 
 <a href="{% url 'job_detail' job.id|default:1 %}"
-   class="flex items-center gap-3 sm:gap-4 bg-blue-100 hover:bg-blue-200
-          rounded-xl p-3 sm:p-4 cursor-pointer transition-colors group"
+   class="flex items-center gap-4 bg-blue-100 hover:bg-blue-200
+          rounded-xl p-4 cursor-pointer transition-colors group"
    data-title="{{ job.title|lower }}"
    data-org="{{ job.organization|lower }}">
 
   <!-- Emblem -->
-  <div class="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14">
+  <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20">
     <img src="{% static 'client/img/emblem.png' %}"
          alt="{{ job.organization }}"
          class="w-full h-full object-contain"
@@ -44,7 +44,7 @@ TODO (DB): pass JobListing queryset objects directly.
     </p>
     <p class="text-xs sm:text-sm text-gray-600">{{ job.location }}</p>
     <p class="text-xs sm:text-sm text-gray-600 mt-0.5">
-      Deadline: <span class="font-semibold text-gray-800">{{ job.deadline }}</span>
+      Deadline: <span class="font-medium text-gray-800">{{ job.deadline }}</span>
     </p>
   </div>
 
