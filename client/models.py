@@ -209,3 +209,25 @@ class GrievanceStatusHistory(models.Model):
 
     def __str__(self):
         return f"#{self.grievance_id} → {self.status}"
+
+class CarouselImage(models.Model):
+    image      = models.ImageField(upload_to='carousel/')
+    caption    = models.CharField(max_length=255, blank=True)
+    order      = models.PositiveIntegerField(default=1)
+    is_active  = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name='carousel_images')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'carousel_images'
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return self.caption or f'Carousel Image #{self.id}'
+
+    def delete(self, *args, **kwargs):
+        import os
+        if self.image and os.path.isfile(self.image.path):
+            os.remove(self.image.path)
+        super().delete(*args, **kwargs)

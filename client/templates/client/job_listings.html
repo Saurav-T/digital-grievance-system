@@ -5,25 +5,68 @@
 
 {% block extra_head %}
 <style>
+  /* Card hover lift */
   .job-card {
     transition: transform 0.18s ease, box-shadow 0.18s ease;
+    position: relative;
   }
   .job-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(30, 58, 138, 0.13);
   }
+
+  /* Filter dropdown */
   #filter-dropdown { display: none; }
   #filter-dropdown.open { display: block; }
 
+  /* Pagination */
   .page-btn.active {
     background-color: #1e3a8a !important;
     color: #fff !important;
     border-color: #1e3a8a !important;
     font-weight: 700;
   }
-  .page-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+  .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Bookmark button */
+  .bookmark-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: background 0.15s ease, transform 0.15s ease;
+    line-height: 0;
+    z-index: 2;
+  }
+  .bookmark-btn:hover { background: rgba(30,58,138,0.08); transform: scale(1.15); }
+  .bookmark-btn svg { width: 18px; height: 18px; }
+  .bookmark-btn.saved svg { fill: #1e3a8a; stroke: #1e3a8a; }
+  .bookmark-btn:not(.saved) svg { fill: none; stroke: #9ca3af; }
+
+  /* Toast */
+  #bm-toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #1e3a8a;
+    color: #fff;
+    font-size: 0.8rem;
+    padding: 0.5rem 1.25rem;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    white-space: nowrap;
+    z-index: 9999;
+  }
+  #bm-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 </style>
 {% endblock %}
@@ -31,46 +74,46 @@
 {% block content %}
 <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-  <!-- Page heading -->
-  <div class="mb-6">
-    <span class="inline-block text-brand-blue font-bold text-lg pb-1 border-b-2 border-brand-blue">
-      Job Listings
-    </span>
-  </div>
+  <!-- Breadcrumb + Back Button -->
+  <div class="flex items-center gap-2 mb-6 flex-wrap">
+  <button onclick="history.back()"
+          class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+         stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Back
+  </button>
+  <span class="text-gray-300">/</span>
+  <span class="inline-block text-brand-blue font-semibold text-base pb-0.5 border-b-2 border-red-500">
+    Job Listings
+  </span>
+</div>
 
   <!-- Search + Filter -->
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
     <div class="search-wrapper flex items-center gap-2 w-full sm:w-auto">
-      <input
-        id="job-search"
-        type="text"
-        placeholder="Search"
+      <input id="job-search" type="text" placeholder="Search"
         class="w-full sm:w-64 lg:w-72 px-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-500
                border border-gray-300 rounded bg-gray-100
-               focus:outline-none focus:ring-2 focus:ring-brand-blue"
-      />
-      <button
-        id="search-btn"
-        type="button"
+               focus:outline-none focus:ring-2 focus:ring-brand-blue"/>
+      <button id="search-btn" type="button"
         class="shrink-0 bg-brand-blue hover:bg-brand-blue-dark text-white px-6 py-2.5
-               text-sm font-semibold rounded transition-colors"
-      >
+               text-sm font-semibold rounded transition-colors">
         Search
       </button>
     </div>
 
     <div class="relative self-end sm:self-auto shrink-0">
-      <button
-        id="filter-btn"
-        type="button"
+      <button id="filter-btn" type="button"
         class="flex items-center gap-2 border border-gray-300 rounded bg-gray-100
-               hover:bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors"
-      >
+               hover:bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors">
         Filter
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
           <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
         </svg>
       </button>
+
       <div id="filter-dropdown" class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-10 p-3 text-sm text-gray-700">
         <div class="flex items-center justify-between mb-3">
           <p class="font-semibold text-gray-800">Filter by</p>
@@ -115,31 +158,24 @@
 
 </section>
 
-{% comment %}
-  DATA ISLAND — In production replace the contents of this script tag with:
-    {{ jobs_json|json_script:"job-data" }}
-  where jobs_json is produced in the view:
-    import json
-    context['jobs_json'] = json.dumps([
-        {'title': j.job_title, 'org': j.department, 'location': j.department_location,
-         'deadline': j.deadline.isoformat(), 'url': j.get_absolute_url(), 'logo': ''}
-        for j in jobs
-    ])
-{% endcomment %}
+<!-- Toast notification -->
+<div id="bm-toast"></div>
+
+<!-- Job Data -->
 <script id="job-data" type="application/json">
 [
-  { "title": "Computer Operator",    "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "#" },
-  { "title": "Data Entry Officer",   "org": "Ministry of Finance",   "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "#" },
-  { "title": "Computer Operator",    "org": "Ministry of Education", "location": "Pokhara, Nepal",    "deadline": "2026-07-30", "url": "#" },
-  { "title": "IT Support Officer",   "org": "Ministry of Health",    "location": "Lalitpur, Nepal",   "deadline": "2026-08-15", "url": "#" },
-  { "title": "Network Engineer",     "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "#" },
-  { "title": "System Administrator", "org": "Ministry of Home",      "location": "Bhaktapur, Nepal",  "deadline": "2026-08-01", "url": "#" },
-  { "title": "Computer Operator",    "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "#" },
-  { "title": "Web Developer",        "org": "Ministry of Finance",   "location": "Kathmandu, Nepal",  "deadline": "2026-08-20", "url": "#" },
-  { "title": "Database Admin",       "org": "Ministry of Health",    "location": "Pokhara, Nepal",    "deadline": "2026-07-30", "url": "#" },
-  { "title": "Computer Operator",    "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "#" },
-  { "title": "Software Engineer",    "org": "Ministry of Science",   "location": "Lalitpur, Nepal",   "deadline": "2026-09-01", "url": "#" },
-  { "title": "IT Officer",           "org": "Ministry of Home",      "location": "Kathmandu, Nepal",  "deadline": "2026-07-28", "url": "#" }
+  { "id":1,  "title": "Computer Operator",    "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "{% url 'job_detail' 1 %}",  "email": "hr@moe.gov.np" },
+  { "id":2,  "title": "Data Entry Officer",   "org": "Ministry of Finance",   "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "{% url 'job_detail' 2 %}",  "email": "hr@mof.gov.np" },
+  { "id":3,  "title": "Computer Operator",    "org": "Ministry of Education", "location": "Pokhara, Nepal",    "deadline": "2026-07-30", "url": "{% url 'job_detail' 3 %}",  "email": "hr@moe.gov.np" },
+  { "id":4,  "title": "IT Support Officer",   "org": "Ministry of Health",    "location": "Lalitpur, Nepal",   "deadline": "2026-08-15", "url": "{% url 'job_detail' 4 %}",  "email": "hr@moh.gov.np" },
+  { "id":5,  "title": "Network Engineer",     "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "{% url 'job_detail' 5 %}",  "email": "hr@moe.gov.np" },
+  { "id":6,  "title": "System Administrator", "org": "Ministry of Home",      "location": "Bhaktapur, Nepal",  "deadline": "2026-08-01", "url": "{% url 'job_detail' 6 %}",  "email": "hr@moha.gov.np" },
+  { "id":7,  "title": "Computer Operator",    "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "{% url 'job_detail' 7 %}",  "email": "hr@moe.gov.np" },
+  { "id":8,  "title": "Web Developer",        "org": "Ministry of Finance",   "location": "Kathmandu, Nepal",  "deadline": "2026-08-20", "url": "{% url 'job_detail' 8 %}",  "email": "hr@mof.gov.np" },
+  { "id":9,  "title": "Database Admin",       "org": "Ministry of Health",    "location": "Pokhara, Nepal",    "deadline": "2026-07-30", "url": "{% url 'job_detail' 9 %}",  "email": "hr@moh.gov.np" },
+  { "id":10, "title": "Computer Operator",    "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "{% url 'job_detail' 10 %}", "email": "hr@moe.gov.np" },
+  { "id":11, "title": "Software Engineer",    "org": "Ministry of Science",   "location": "Lalitpur, Nepal",   "deadline": "2026-09-01", "url": "{% url 'job_detail' 11 %}", "email": "hr@moste.gov.np" },
+  { "id":12, "title": "IT Officer",           "org": "Ministry of Home",      "location": "Kathmandu, Nepal",  "deadline": "2026-07-28", "url": "{% url 'job_detail' 12 %}", "email": "hr@moha.gov.np" }
 ]
 </script>
 {% endblock %}
@@ -150,11 +186,13 @@
   const PER_PAGE = 6;
   const FALLBACK = "{% static 'client/img/emblem.png' %}";
   const NOW = new Date();
+  const STORAGE_KEY = 'dgnbs_bookmarks';
 
   let allJobs     = [];
   let filtered    = [];
   let currentPage = 1;
 
+  /* ── DOM refs ── */
   const grid           = document.getElementById('job-grid');
   const paginationEl   = document.getElementById('pagination');
   const emptyState     = document.getElementById('empty-state');
@@ -164,12 +202,35 @@
   const filterDropdown = document.getElementById('filter-dropdown');
   const filterCloseBtn = document.getElementById('filter-close-btn');
   const filterChecks   = document.querySelectorAll('.filter-check');
+  const toast          = document.getElementById('bm-toast');
 
-  /* Load data */
-  try { allJobs = JSON.parse(document.getElementById('job-data').textContent); }
-  catch (e) { console.error('Job data error', e); }
+  /* ── Bookmark persistence ── */
+  function getBookmarks() {
+    try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); }
+    catch { return new Set(); }
+  }
+  function saveBookmarks(set) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...set])); } catch {}
+  }
+  function toggleBookmark(id, title) {
+    const bm = getBookmarks();
+    const saved = bm.has(id);
+    if (saved) { bm.delete(id); showToast(`Removed "${title}" from bookmarks`); }
+    else        { bm.add(id);   showToast(`Bookmarked "${title}"`); }
+    saveBookmarks(bm);
+    return !saved;
+  }
 
-  /* Helpers */
+  /* ── Toast ── */
+  let toastTimer;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  /* ── Helpers ── */
   function formatDeadline(iso) {
     const d = new Date(iso);
     if (isNaN(d)) return iso;
@@ -179,22 +240,19 @@
                 'July','August','September','October','November','December'][d.getMonth()];
     return `${day}${s} ${mo}, ${d.getFullYear()}`;
   }
-
   function isThisMonth(iso) {
     const d = new Date(iso);
     return d.getFullYear() === NOW.getFullYear() && d.getMonth() === NOW.getMonth();
   }
-
   function isDeadlineSoon(iso) {
     const diff = (new Date(iso) - NOW) / 86400000;
     return diff >= 0 && diff <= 7;
   }
 
-  /* Filter */
+  /* ── Filter ── */
   function applyFilters() {
     const q = searchInput.value.toLowerCase().trim();
     const active = [...filterChecks].filter(c => c.checked).map(c => c.dataset.filter);
-
     filtered = allJobs.filter(job => {
       if (q && !job.title.toLowerCase().includes(q) && !job.org.toLowerCase().includes(q)) return false;
       for (const f of active) {
@@ -205,61 +263,106 @@
       }
       return true;
     });
-
     currentPage = 1;
     render();
   }
 
-  /* Render cards */
+  /* ── Render cards ── */
   function render() {
+    const bm         = getBookmarks();
     const total      = filtered.length;
     const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
     currentPage      = Math.min(currentPage, totalPages);
-
-    const pageJobs = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+    const pageJobs   = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
     if (pageJobs.length === 0) {
       grid.innerHTML = '';
       emptyState.classList.remove('hidden');
     } else {
       emptyState.classList.add('hidden');
-      grid.innerHTML = pageJobs.map(job => `
-        <a href="${job.url}"
-           class="job-card flex items-center gap-4 bg-blue-100 hover:bg-blue-200 rounded-lg p-4 cursor-pointer">
+      grid.innerHTML = pageJobs.map(job => {
+        const isSaved = bm.has(job.id);
+        const soon    = isDeadlineSoon(job.deadline);
+        return `
+        <div class="job-card relative bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-4 cursor-pointer"
+             data-job-id="${job.id}" data-job-url="${job.url}">
+
+          <!-- Bookmark button -->
+          <button
+            class="bookmark-btn ${isSaved ? 'saved' : ''}"
+            data-id="${job.id}"
+            data-title="${job.title.replace(/"/g,'&quot;')}"
+            aria-label="${isSaved ? 'Remove bookmark' : 'Bookmark this job'}"
+            title="${isSaved ? 'Remove bookmark' : 'Save job'}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2"
+                 stroke="${isSaved ? '#1e3a8a' : '#9ca3af'}" fill="${isSaved ? '#1e3a8a' : 'none'}">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+            </svg>
+          </button>
+
+          <!-- Emblem -->
           <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20">
             <img src="${job.logo || FALLBACK}"
                  alt="${job.org}"
                  class="w-full h-full object-contain"
                  onerror="this.onerror=null;this.src='${FALLBACK}';">
           </div>
-          <div class="min-w-0">
+
+          <!-- Details -->
+          <div class="min-w-0 pr-6">
             <p class="font-bold text-gray-900 text-sm sm:text-base leading-snug">${job.title}</p>
             <p class="text-gray-700 text-xs sm:text-sm mt-0.5">${job.org}</p>
             <p class="text-gray-600 text-xs sm:text-sm">${job.location}</p>
             <p class="text-gray-600 text-xs sm:text-sm">
               Deadline:
-              <span class="font-medium ${isDeadlineSoon(job.deadline) ? 'text-red-600' : 'text-gray-800'}">
+              <span class="font-medium ${soon ? 'text-red-600' : 'text-gray-800'}">
                 ${formatDeadline(job.deadline)}
               </span>
             </p>
           </div>
-        </a>`).join('');
+        </div>`;
+      }).join('');
+
+      /* Card click → navigate (but NOT when bookmark button is clicked) */
+      grid.querySelectorAll('.job-card').forEach(card => {
+        card.addEventListener('click', e => {
+          if (e.target.closest('.bookmark-btn')) return;
+          const url = card.dataset.jobUrl;
+          if (url && url !== '#') window.location.href = url;
+        });
+      });
+
+      /* Bookmark button clicks */
+      grid.querySelectorAll('.bookmark-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          const id    = parseInt(btn.dataset.id, 10);
+          const title = btn.dataset.title;
+          const nowSaved = toggleBookmark(id, title);
+          btn.classList.toggle('saved', nowSaved);
+          const svg = btn.querySelector('svg');
+          svg.setAttribute('stroke', nowSaved ? '#1e3a8a' : '#9ca3af');
+          svg.setAttribute('fill',   nowSaved ? '#1e3a8a' : 'none');
+          btn.setAttribute('aria-label', nowSaved ? 'Remove bookmark' : 'Bookmark this job');
+        });
+      });
     }
 
     renderPagination(totalPages);
   }
 
-  /* Render pagination */
+  /* ── Render pagination ── */
   function renderPagination(totalPages) {
     paginationEl.innerHTML = '';
     if (totalPages <= 1) return;
 
     function mkBtn(label, page, disabled, active) {
       const btn = document.createElement('button');
-      btn.type        = 'button';
+      btn.type = 'button';
       btn.textContent = label;
-      btn.disabled    = disabled;
-      btn.className   = 'page-btn px-3 py-1.5 text-sm rounded border transition-colors ' +
+      btn.disabled = disabled;
+      btn.className = 'page-btn px-3 py-1.5 text-sm rounded border transition-colors ' +
         (active   ? 'active border-brand-blue bg-brand-blue text-white font-bold' :
          disabled ? 'border-gray-200 bg-white text-gray-400' :
                     'border-gray-300 bg-white text-gray-700 hover:bg-gray-100');
@@ -273,7 +376,6 @@
       return btn;
     }
 
-    /* Build page number array with ellipsis */
     function pageRange(cur, total) {
       if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
       const r = [1];
@@ -285,22 +387,20 @@
     }
 
     paginationEl.appendChild(mkBtn('← Prev', currentPage - 1, currentPage === 1, false));
-
     pageRange(currentPage, totalPages).forEach(p => {
       if (p === '…') {
         const span = document.createElement('span');
         span.textContent = '…';
-        span.className   = 'px-2 text-sm text-gray-400';
+        span.className = 'px-2 text-sm text-gray-400';
         paginationEl.appendChild(span);
       } else {
         paginationEl.appendChild(mkBtn(p, p, false, p === currentPage));
       }
     });
-
     paginationEl.appendChild(mkBtn('Next →', currentPage + 1, currentPage === totalPages, false));
   }
 
-  /* Events */
+  /* ── Event wiring ── */
   filterBtn.addEventListener('click', e => { e.stopPropagation(); filterDropdown.classList.toggle('open'); });
   filterCloseBtn.addEventListener('click', () => filterDropdown.classList.remove('open'));
   document.addEventListener('click', () => filterDropdown.classList.remove('open'));
@@ -309,7 +409,9 @@
   searchBtn.addEventListener('click', applyFilters);
   filterChecks.forEach(c => c.addEventListener('change', applyFilters));
 
-  /* Boot */
+  /* ── Boot ── */
+  try { allJobs = JSON.parse(document.getElementById('job-data').textContent); }
+  catch (e) { console.error('Job data error', e); }
   filtered = [...allJobs];
   render();
 })();

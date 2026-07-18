@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Digital Grievance and Notice Board System{% endblock %}</title>
-
+    <link rel="icon" href="{% static 'client/img/emblem.png' %}" type="image/png">
     <!-- Tailwind via CDN (swap for a build pipeline in production) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -23,6 +23,12 @@
 
     <link rel="stylesheet" href="{% static 'client/css/custom.css' %}">
     {% block extra_head %}{% endblock %}
+
+    {# ── Marquee notice data (injected by views that pass marquee_notices_json) ── #}
+    {% if marquee_notices_json %}
+    <script>window.MARQUEE_NOTICES = {{ marquee_notices_json|safe }};</script>
+    {% endif %}
+
 </head>
 <body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
 
@@ -37,7 +43,6 @@
         {% block content %}{% endblock %}
     </main>
 
-    
     {% include "client/partials/footer.html" %}
 
     <script src="{% static 'client/js/main.js' %}"></script>

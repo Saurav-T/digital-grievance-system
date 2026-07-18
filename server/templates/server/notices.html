@@ -13,12 +13,26 @@
 </div>
 
 <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="p-4 border-b bg-gray-50 flex items-center justify-between gap-3 flex-wrap">
+        <div class="relative max-w-xs w-full sm:w-auto flex-1">
+            <svg class="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" id="search-notices" oninput="filterNotices()"
+                   placeholder="Search notices by title…"
+                   class="adm-input pl-9 text-sm">
+        </div>
+        <select id="filter-notices-author" onchange="filterNotices()"
+                class="adm-input text-sm w-auto sm:ml-auto">
+            <option value="all">All Authors</option>
+        </select>
+    </div>
     <div class="overflow-x-auto">
         <table class="w-full admin-table">
             <thead><tr><th>ID</th><th>Title</th><th>Issue Date</th><th>Created By</th><th>Added</th><th>Actions</th></tr></thead>
-            <tbody>
+            <tbody id="table-notices-body">
                 {% for n in notices %}
-                <tr>
+                <tr data-author="{{ n.created_by.get_full_name|default:'' }}">
                     <td class="font-mono text-xs text-gray-400">#{{ n.id }}</td>
                     <td class="font-medium max-w-xs truncate" title="{{ n.title }}">{{ n.title }}</td>
                     <td class="whitespace-nowrap text-sm">{{ n.issue_date|date:"d M Y" }}</td>
@@ -40,6 +54,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        <p id="no-results-notices" class="hidden text-center py-8 text-sm text-gray-400">No matching notices.</p>
     </div>
 </div>
 
@@ -156,5 +171,45 @@ async function loadNoticeEdit(pk) {
     document.getElementById('en-date').value  = d.issue_date;
     openModal('modal-edit-notice');
 }
+
+// ── Search + author filter for notices ───────────────────────
+function populateNoticeAuthors() {
+    var tbody = document.getElementById('table-notices-body');
+    var select = document.getElementById('filter-notices-author');
+    if (!tbody || !select) return;
+    var authors = new Set();
+    tbody.querySelectorAll('tr[data-author]').forEach(function (row) {
+        var a = row.dataset.author;
+        if (a) authors.add(a);
+    });
+    Array.from(authors).sort().forEach(function (a) {
+        var opt = document.createElement('option');
+        opt.value = a;
+        opt.textContent = a;
+        select.appendChild(opt);
+    });
+}
+
+function filterNotices() {
+    var q = document.getElementById('search-notices').value.trim().toLowerCase();
+    var author = document.getElementById('filter-notices-author').value;
+    var tbody = document.getElementById('table-notices-body');
+    if (!tbody) return;
+    var rows = tbody.querySelectorAll('tr');
+    var visibleCount = 0;
+    rows.forEach(function (row) {
+        if (row.children.length === 1) return; // skip empty-state row
+        var text = row.textContent.toLowerCase();
+        var matchesText = text.indexOf(q) !== -1;
+        var matchesAuthor = author === 'all' || row.dataset.author === author;
+        var visible = matchesText && matchesAuthor;
+        row.classList.toggle('hidden', !visible);
+        if (visible) visibleCount++;
+    });
+    var noResultsEl = document.getElementById('no-results-notices');
+    if (noResultsEl) noResultsEl.classList.toggle('hidden', visibleCount !== 0 || rows.length === 0);
+}
+
+document.addEventListener('DOMContentLoaded', populateNoticeAuthors);
 </script>
 {% endblock %}
