@@ -271,6 +271,9 @@ def notice_download(request, pk):
 def grievances(request):
     return render(request, "client/grievance_form.html")
 
+def track_grievance(request):
+    return render(request, 'client/track_grievance.html', {'grievances': grievances})
+
 
 # =============================================================================
 # Job Listings
