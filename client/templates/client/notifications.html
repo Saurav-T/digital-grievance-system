@@ -1,0 +1,333 @@
+{% extends "client/base.html" %}
+{% load static %}
+
+{% block title %}Notifications – Digital Grievance and Notice Board System{% endblock %}
+
+{% block extra_head %}
+<style>
+  #notif-filter-dropdown { display:none; }
+  #notif-filter-dropdown.open { display:block; }
+
+  .page-btn.active {
+    background-color: #1e3a8a !important;
+    color: #fff !important;
+    border-color: #1e3a8a !important;
+    font-weight: 700;
+  }
+  .page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .notif-row {
+    transition: background-color .15s ease;
+    position: relative;
+  }
+  .notif-row:hover { background-color: #f9fafb; }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Breadcrumb + Back Button -->
+  <div class="flex items-center gap-2 mb-6 flex-wrap">
+    <button onclick="history.back()"
+            class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+           stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+      </svg>
+      Back
+    </button>
+    <span class="text-gray-300">/</span>
+    <span class="inline-block text-brand-blue font-semibold text-base pb-0.5 border-b-2 border-red-500">
+      Notifications
+    </span>
+  </div>
+
+  <!-- Heading + mark all as read -->
+  <div class="flex items-center justify-between mb-6 gap-3 flex-wrap">
+    <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Notifications</h1>
+    <button id="notif-page-mark-all" type="button"
+            class="text-sm text-brand-blue hover:underline font-medium">
+      Mark all as read
+    </button>
+  </div>
+
+  <!-- Search + Filter -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+    <div class="search-wrapper flex items-center gap-2 w-full sm:w-auto">
+      <input id="notif-search" type="text" placeholder="Search"
+             class="w-full sm:w-64 lg:w-72 px-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-500
+                    border border-gray-300 rounded bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-blue"/>
+      <button id="notif-search-btn" type="button"
+              class="shrink-0 bg-brand-blue hover:bg-brand-blue-dark text-white px-6 py-2.5
+                     text-sm font-semibold rounded transition-colors">
+        Search
+      </button>
+    </div>
+
+    <div class="relative self-end sm:self-auto shrink-0">
+      <button id="notif-filter-btn" type="button"
+              class="flex items-center gap-2 border border-gray-300 rounded bg-gray-100
+                     hover:bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors">
+        Filter
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      <div id="notif-filter-dropdown"
+           class="absolute right-0 mt-1 w-56 bg-white border border-gray-200 rounded shadow-lg z-10 p-3 text-sm text-gray-700">
+        <div class="flex items-center justify-between mb-3">
+          <p class="font-semibold text-gray-800">Filter by</p>
+          <button id="notif-filter-close-btn" type="button" class="text-gray-400 hover:text-red-500 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="space-y-2">
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue notif-filter-check" data-filter="grievance"> Grievances</label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue notif-filter-check" data-filter="job"> Job Listings</label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue notif-filter-check" data-filter="notice"> Notices</label>
+          <hr class="border-gray-100">
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="notif-filter-unread" class="accent-brand-blue"> Unread only</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification list -->
+  <div id="notif-page-list" class="space-y-4 min-h-[160px]"></div>
+
+  <div id="notif-page-empty" class="hidden text-center py-20 text-gray-500">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300" fill="none"
+         viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+    </svg>
+    <p class="text-lg font-medium">No notifications match your search.</p>
+    <p class="text-sm mt-1">Try different keywords or clear the filter.</p>
+  </div>
+
+  <!-- Pagination -->
+  <nav id="notif-page-pagination" aria-label="Pagination" class="mt-10 flex flex-wrap items-center justify-center gap-1"></nav>
+
+  <script id="notif-page-data" type="application/json"></script>
+  {{ notifications|json_script:"notif-page-data-json" }}
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const PER_PAGE = 8;
+  const READ_STORAGE_KEY = 'dgnbs_notif_read';
+
+  const listEl = document.getElementById('notif-page-list');
+  const emptyState = document.getElementById('notif-page-empty');
+  const paginationEl = document.getElementById('notif-page-pagination');
+  const searchInput = document.getElementById('notif-search');
+  const searchBtn = document.getElementById('notif-search-btn');
+  const filterBtn = document.getElementById('notif-filter-btn');
+  const filterDropdown = document.getElementById('notif-filter-dropdown');
+  const filterCloseBtn = document.getElementById('notif-filter-close-btn');
+  const filterChecks = document.querySelectorAll('.notif-filter-check');
+  const unreadCheck = document.getElementById('notif-filter-unread');
+  const markAllBtn = document.getElementById('notif-page-mark-all');
+
+  const CFG = {
+    notice:    { lbl: 'Notice',    bg: 'bg-blue-50',   tx: 'text-blue-700',   ic: '🔔' },
+    grievance: { lbl: 'Grievance', bg: 'bg-orange-50', tx: 'text-orange-700', ic: '📝' },
+    job:       { lbl: 'Job',       bg: 'bg-green-50',  tx: 'text-green-700',  ic: '💼' },
+  };
+
+  let allNotifs = [];
+  let filtered = [];
+  let currentPage = 1;
+
+  // Same shape as the header notification demo data: {id,type,title,body,ts,read,url}
+  const DEMO = [
+    {id:1,type:'notice',   title:'New Notice Published',      body:'नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना', ts:Date.now()-7200000,  read:false,url:'/notices/1/'},
+    {id:2,type:'grievance',title:'Grievance #042 Resolved',   body:'Your grievance about Road Blockage has been resolved.', ts:Date.now()-18000000, read:false,url:'#'},
+    {id:3,type:'job',      title:'New Job Listing Available', body:'Computer Operator – Ministry of Education. Deadline: 30 July 2026.', ts:Date.now()-86400000, read:false,url:'/jobs/1/'},
+    {id:4,type:'notice',   title:'Public Holiday Announcement',body:'Government offices closed Tuesday 7 July 2026.',ts:Date.now()-172800000,read:true, url:'/notices/4/'},
+    {id:5,type:'grievance',title:'Grievance #039 Under Review',body:'Your grievance is now being reviewed by the authority.',ts:Date.now()-259200000,read:true, url:'#'},
+    {id:6,type:'job',      title:'New Job Listing Available', body:'Data Entry Operator – Ministry of Home Affairs. Deadline: 15 Aug.',ts:Date.now()-345600000,read:true,url:'/jobs/2/'},
+  ];
+
+  try {
+    const raw = JSON.parse(document.getElementById('notif-page-data-json').textContent);
+    allNotifs = (Array.isArray(raw) && raw.length) ? raw : DEMO;
+  } catch (error) {
+    allNotifs = DEMO;
+  }
+
+  function getReadIds() {
+    try { return new Set(JSON.parse(localStorage.getItem(READ_STORAGE_KEY) || '[]')); }
+    catch { return new Set(); }
+  }
+  function saveReadIds(set) {
+    try { localStorage.setItem(READ_STORAGE_KEY, JSON.stringify([...set])); } catch {}
+  }
+  function isRead(n) {
+    return n.read || getReadIds().has(n.id);
+  }
+  function markRead(id) {
+    const ids = getReadIds();
+    ids.add(id);
+    saveReadIds(ids);
+  }
+  function markAllRead() {
+    const ids = getReadIds();
+    allNotifs.forEach(n => ids.add(n.id));
+    saveReadIds(ids);
+  }
+
+  function ago(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    return Math.floor(s / 86400) + 'd ago';
+  }
+
+  function applyFilters() {
+    const q = searchInput.value.toLowerCase().trim();
+    const activeTypes = [...filterChecks].filter(c => c.checked).map(c => c.dataset.filter);
+    const unreadOnly = unreadCheck.checked;
+
+    filtered = allNotifs.filter(n => {
+      const haystack = `${n.title} ${n.body}`.toLowerCase();
+      if (q && !haystack.includes(q)) return false;
+      if (activeTypes.length && !activeTypes.includes(n.type)) return false;
+      if (unreadOnly && isRead(n)) return false;
+      return true;
+    }).sort((a, b) => b.ts - a.ts);
+
+    currentPage = 1;
+    render();
+  }
+
+  function render() {
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+    currentPage = Math.min(currentPage, totalPages);
+    const pageItems = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+
+    if (pageItems.length === 0) {
+      listEl.innerHTML = '';
+      emptyState.classList.remove('hidden');
+    } else {
+      emptyState.classList.add('hidden');
+      listEl.innerHTML = pageItems.map(n => {
+        const c = CFG[n.type] || CFG.notice;
+        const read = isRead(n);
+        return `
+          <a href="${n.url}" data-id="${n.id}"
+   class="notif-row flex gap-4 px-4 sm:px-5 py-4
+          bg-white rounded-xl border border-gray-200 shadow-sm
+          hover:shadow-md hover:border-gray-300 hover:bg-gray-50
+          transition-all duration-200
+          hover:no-underline
+          ${read ? '' : 'is-unread'}">
+            <div class="flex-shrink-0 w-11 h-11 rounded-full ${c.bg} flex items-center justify-center text-lg leading-none">${c.ic}</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between gap-2">
+                <p class="text-sm font-semibold text-gray-900 leading-tight ${read ? '' : ''}">${n.title}</p>
+                ${!read ? '<span class="w-2 h-2 rounded-full bg-brand-blue mt-1 flex-shrink-0"></span>' : ''}
+              </div>
+              <p class="text-sm text-gray-500 mt-1 line-clamp-2">${n.body}</p>
+              <div class="flex items-center gap-2 mt-2">
+                <span class="text-[11px] font-medium ${c.tx} ${c.bg} px-2 py-0.5 rounded">${c.lbl}</span>
+                <span class="text-[11px] text-gray-400">${ago(n.ts)}</span>
+              </div>
+            </div>
+          </a>`;
+      }).join('');
+
+      listEl.querySelectorAll('.notif-row').forEach(row => {
+        row.addEventListener('click', e => {
+          const id = parseInt(row.dataset.id, 10);
+          markRead(id);
+          const href = row.getAttribute('href');
+          if (!href || href === '#') {
+            e.preventDefault();
+            row.classList.remove('is-unread');
+            row.querySelector('span.bg-brand-blue')?.remove();
+          }
+        });
+      });
+    }
+
+    renderPagination(totalPages);
+  }
+
+  function renderPagination(totalPages) {
+    paginationEl.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    function mkBtn(label, page, disabled, active) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = label;
+      btn.disabled = disabled;
+      btn.className = 'page-btn px-3 py-1.5 text-sm rounded border transition-colors ' +
+        (active ? 'active border-brand-blue bg-brand-blue text-white font-bold' :
+         disabled ? 'border-gray-200 bg-white text-gray-400' :
+                    'border-gray-300 bg-white text-gray-700 hover:bg-gray-100');
+      if (!disabled && !active) {
+        btn.addEventListener('click', () => {
+          currentPage = page;
+          render();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      }
+      return btn;
+    }
+
+    function pageRange(cur, total) {
+      if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+      const r = [1];
+      if (cur > 3) r.push('…');
+      for (let p = Math.max(2, cur - 1); p <= Math.min(total - 1, cur + 1); p++) r.push(p);
+      if (cur < total - 2) r.push('…');
+      r.push(total);
+      return r;
+    }
+
+    paginationEl.appendChild(mkBtn('← Prev', currentPage - 1, currentPage === 1, false));
+    pageRange(currentPage, totalPages).forEach(page => {
+      if (page === '…') {
+        const span = document.createElement('span');
+        span.textContent = '…';
+        span.className = 'px-2 text-sm text-gray-400';
+        paginationEl.appendChild(span);
+      } else {
+        paginationEl.appendChild(mkBtn(page, page, false, page === currentPage));
+      }
+    });
+    paginationEl.appendChild(mkBtn('Next →', currentPage + 1, currentPage === totalPages, false));
+  }
+
+  filterBtn.addEventListener('click', e => { e.stopPropagation(); filterDropdown.classList.toggle('open'); });
+  filterCloseBtn.addEventListener('click', () => filterDropdown.classList.remove('open'));
+  document.addEventListener('click', () => filterDropdown.classList.remove('open'));
+  filterDropdown.addEventListener('click', e => e.stopPropagation());
+
+  searchInput.addEventListener('input', applyFilters);
+  searchBtn.addEventListener('click', applyFilters);
+  filterChecks.forEach(check => check.addEventListener('change', applyFilters));
+  unreadCheck.addEventListener('change', applyFilters);
+
+  markAllBtn.addEventListener('click', () => {
+    markAllRead();
+    applyFilters();
+  });
+
+  applyFilters();
+})();
+</script>
+{% endblock %}
