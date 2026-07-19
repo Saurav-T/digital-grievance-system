@@ -15,6 +15,7 @@ urlpatterns = [
     path("grievances/create/", views.grievances, name="grievance_create"),
     path('grievances/track/', views.track_grievance, name='track_grievance'),
 
+
     path("jobs/", views.job_listings, name="job_listings"),
 
     # ── Job listing detail ──────────────────────────────────
