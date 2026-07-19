@@ -29,4 +29,5 @@ urlpatterns = [
 
     # Profile
     path('profile/', views.profile,      name='profile'),
+    path('notifications/', views.notifications, name="notifications"),
 ]

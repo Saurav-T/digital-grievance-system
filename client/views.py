@@ -481,3 +481,6 @@ def profile(request):
         "notification_settings":  notification_settings,
         "preference_categories":  preference_categories,
     })
+
+def notifications(request):
+    return render(request, "client/notifications.html")
