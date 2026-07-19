@@ -81,6 +81,9 @@ def notices(request):
 def grievances(request):
     return render(request, 'client/grievance_form.html')
 
+def track_grievance(request):
+    return render(request, 'client/track_grievance.html')
+
 
 def job_listings(request):
     return render(request, "client/job_listings.html")
