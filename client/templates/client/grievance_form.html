@@ -3,127 +3,412 @@
 
 {% block title %}Issue Grievance | Digital Grievance and Notice Board System{% endblock %}
 
+{% block extra_head %}
+<link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+<style>
+  #grievance-map {
+    width: 100%;
+    height: 300px;
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+  }
+  @media (min-width: 1024px) {
+    #grievance-map { height: 360px; }
+  }
+  .maplibregl-ctrl-attrib { font-size: 10px; }
+  .maplibregl-ctrl-top-right { top: 8px; right: 8px; }
+
+  .griev-input {
+    width: 100%;
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.875rem;
+    color: #374151;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s, background-color .15s;
+  }
+  .griev-input:focus { border-color: #1e3a8a; box-shadow: 0 0 0 3px rgba(30,58,138,.1); background:#fff; }
+  .griev-input[readonly] { color:#4b5563; }
+
+  .griev-label {
+    display:block;
+    font-size:.8125rem;
+    font-weight:600;
+    color:#374151;
+    margin-bottom:.4rem;
+  }
+  .griev-section-title {
+    font-size:.75rem;
+    font-weight:700;
+    color:#6b7280;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    margin-bottom:1.25rem;
+  }
+
+  /* Priority segmented control */
+  .priority-pill input { position:absolute; opacity:0; pointer-events:none; }
+  .priority-pill span {
+    display:block; text-align:center; cursor:pointer;
+    padding:.55rem .5rem; border-radius:.5rem;
+    border:1.5px solid #e5e7eb; background:#f9fafb;
+    font-size:.8125rem; font-weight:600; color:#6b7280;
+    transition: all .15s ease;
+  }
+  .priority-pill input:checked + span {
+    background:#1e3a8a; border-color:#1e3a8a; color:#fff;
+    box-shadow: 0 2px 6px rgba(30,58,138,.25);
+  }
+  .priority-pill:hover span { border-color:#93a5c9; }
+
+  /* Attachment drop zone */
+  #attachment-drop-zone {
+    cursor: pointer;
+    transition: border-color .15s, background-color .15s;
+  }
+  #attachment-drop-zone:hover { border-color:#1e3a8a; background:#eff6ff; }
+  .attachment-thumb { transition: transform .15s, box-shadow .15s; }
+  .attachment-thumb:hover { transform: scale(1.04); box-shadow: 0 4px 14px rgba(0,0,0,.14); }
+
+  .map-panel {
+    background:#f9fafb;
+    border:1px solid #e5e7eb;
+    border-radius:.9rem;
+    padding:1rem;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="px-6 pt-3 pb-4">
-    <nav class="text-sm mb-3">
-        <a href="#" class="text-brand-blue underline underline-offset-2">Grievances</a>
-    </nav>
+<div class="bg-gray-50 min-h-[calc(100vh-160px)]">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
-    <div class="flex gap-3">
-        <button class="bg-brand-blue text-white text-sm font-semibold px-5 py-2 rounded-md shadow hover:bg-brand-blue-dark transition">
-            Issue Grievance
+    <!-- Breadcrumb + Back Button -->
+    <div class="flex items-center gap-2 mb-4 flex-wrap">
+      <button onclick="history.back()"
+              class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+             stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back
+      </button>
+      <span class="text-gray-300">/</span>
+      <span class="inline-block text-brand-blue font-semibold text-base pb-0.5 border-b-2 border-red-500">
+        Grievances
+      </span>
+    </div>
+
+    <!-- Tab buttons -->
+    <div class="flex flex-wrap gap-3 mb-6 sm:mb-8">
+      <button class="bg-brand-blue text-white text-sm font-semibold px-5 py-2 rounded-md shadow hover:bg-brand-blue-dark transition">
+        Issue Grievance
+      </button>
+      <a href="{% url 'track_grievance' %}">
+        <button type="button" class="bg-gray-205 text-gray-805 text-sm font-semibold px-5 py-2 rounded-md shadow hover:bg-gray-300 transition">
+          Track Grievances
         </button>
-        <a href="{% url 'track_grievance' %}">
-            <button type="button" class="bg-gray-205 text-gray-805 text-sm font-semibold px-5 py-2 rounded-md shadow hover:bg-gray-300 transition">
-                Track Grievances
-            </button>
-        </a>
+      </a>
     </div>
-</div>
 
-<div class="flex justify-center items-center px-4 py-8">
-    <div class="bg-white w-full max-w-xl rounded-lg shadow-md border border-gray-200 p-8">
-        <h1 class="text-center text-xl font-bold text-gray-800 mb-8">Grievance Form</h1>
+    <!-- Form card -->
+    <div class="bg-white w-full rounded-2xl shadow-md border border-gray-200 p-5 sm:p-8 lg:p-10">
+      <div class="text-center mb-8 sm:mb-10">
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Grievance Form</h1>
+        <p class="text-sm text-gray-500 mt-1.5">Tell us what's wrong and where, we'll route it to the right department.</p>
+      </div>
 
-        <form method="post" action="{% url 'grievance_create' %}" enctype="multipart/form-data">
-            {% csrf_token %}
+      <form method="post" action="{% url 'grievance_create' %}" enctype="multipart/form-data" id="grievance-form">
+        {% csrf_token %}
 
-            <!-- Category -->
-            <div class="grid grid-cols-3 items-center gap-4 mb-4">
-                <label for="category" class="col-span-1 text-sm font-semibold text-gray-800">Category</label>
-                <select id="category" name="category"
-                        class="col-span-2 bg-gray-100 border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-blue">
-                    <option value="infrastructure" selected>Infrastructure</option>
-                    <option value="sanitation">Sanitation</option>
-                    <option value="safety">Safety</option>
-                    <option value="noise">Noise</option>
-                    <option value="other">Other</option>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-8">
+
+          <!-- ══ Left column: grievance details ══ -->
+          <div>
+            <p class="griev-section-title">Grievance Details</p>
+            <div class="space-y-5">
+              <div>
+                <label for="category" class="griev-label">Category</label>
+                <select id="category" name="category" class="griev-input">
+                  <option value="infrastructure" selected>Infrastructure</option>
+                  <option value="sanitation">Sanitation</option>
+                  <option value="safety">Safety</option>
+                  <option value="noise">Noise</option>
+                  <option value="other">Other</option>
                 </select>
-            </div>
+              </div>
 
-            <!-- Subject -->
-            <div class="grid grid-cols-3 items-center gap-4 mb-4">
-                <label for="subject" class="col-span-1 text-sm font-semibold text-gray-800">Subject</label>
-                <input type="text" id="subject" name="subject"
-                       class="col-span-2 bg-gray-100 border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-            </div>
+              <div>
+                <label for="subject" class="griev-label">Subject</label>
+                <input type="text" id="subject" name="subject" placeholder="A short, clear title"
+                       class="griev-input">
+              </div>
 
-            <!-- Description -->
-            <div class="mb-4">
-                <label for="description" class="block text-sm font-semibold text-gray-800 mb-2">Description</label>
-                <textarea id="description" name="description" rows="6"
-                          class="w-full bg-gray-100 border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-700 resize-y focus:outline-none focus:ring-2 focus:ring-brand-blue"></textarea>
-            </div>
+              <div>
+                <label for="description" class="griev-label">Description</label>
+                <textarea id="description" name="description" rows="5" placeholder="Describe the issue in detail…"
+                          class="griev-input resize-y"></textarea>
+              </div>
 
-            <!-- Priority -->
-            <div class="mb-4">
-                <label class="block text-sm font-semibold text-gray-800 mb-2">Priority</label>
-                <div class="flex flex-col gap-2 pl-1">
-                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                        <input type="radio" name="priority" value="low" checked class="accent-brand-blue w-3.5 h-3.5">
-                        Low
-                    </label>
-                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                        <input type="radio" name="priority" value="medium" class="accent-brand-blue w-3.5 h-3.5">
-                        Medium
-                    </label>
-                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                        <input type="radio" name="priority" value="high" class="accent-brand-blue w-3.5 h-3.5">
-                        High
-                    </label>
+              <div>
+                <label class="griev-label">Priority</label>
+                <div class="grid grid-cols-3 gap-2">
+                  <label class="priority-pill">
+                    <input type="radio" name="priority" value="low" checked>
+                    <span>Low</span>
+                  </label>
+                  <label class="priority-pill">
+                    <input type="radio" name="priority" value="medium">
+                    <span>Medium</span>
+                  </label>
+                  <label class="priority-pill">
+                    <input type="radio" name="priority" value="high">
+                    <span>High</span>
+                  </label>
                 </div>
-            </div>
+              </div>
 
-            <!-- Location -->
-            <div class="mb-4">
-                <label for="location" class="block text-sm font-semibold text-gray-800 mb-2">Location</label>
-                <div class="relative">
-                    <input type="text" id="location" name="location"
-                           class="w-full bg-gray-100 border border-gray-300 rounded-md px-3 py-2 pr-10 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-                    <button type="button" id="location-map-btn"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-brand-blue hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-blue transition-colors"
-                            aria-label="Pick location on map">
-                        <svg xmlns="http://www.w3.org/2000/svg"
-                             class="h-5 w-5"
-                             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                    </button>
+              <!-- ══ Attachments (carousel-style) ══ -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <label class="griev-label mb-0">Attachments</label>
+                  <span id="attachment-count" class="text-xs text-gray-400">No images added</span>
                 </div>
-            </div>
 
-            <!-- Attachments -->
-            <div class="mb-8">
-                <label class="block text-sm font-semibold text-gray-800 mb-2">Attachments</label>
-                <label for="attachment"
-                       class="flex items-center justify-center h-16 w-full bg-gray-100 border border-gray-300 rounded-md text-xs text-gray-600 cursor-pointer hover:bg-gray-200 transition">
-                    <span id="attachment-label">Attach an image</span>
-                    <input type="file" id="attachment" name="attachment" accept="image/*" class="hidden">
-                </label>
-            </div>
+                <div id="attachment-drop-zone"
+                     class="border-2 border-dashed border-gray-300 rounded-xl py-4 px-4 flex items-center gap-3">
+                  <svg class="h-8 w-8 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                  <p class="text-xs text-gray-600">
+                    <span class="text-brand-blue font-semibold underline">Browse files</span> or drag images here
+                    <span class="block text-gray-400 mt-0.5">JPG, PNG, WEBP</span>
+                  </p>
+                  <input type="file" id="attachment-input" name="attachments" accept="image/*" multiple class="hidden">
+                </div>
 
-            <!-- Submit -->
-            <div class="flex justify-center">
-                <button type="submit"
-                        class="bg-brand-blue text-white text-sm font-semibold px-10 py-2.5 rounded-md shadow hover:bg-brand-blue-dark transition">
-                    Submit
+                <div id="attachment-thumbs" class="flex flex-wrap gap-3 mt-3"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Right column: location + map ══ -->
+          <div class="lg:border-l lg:border-gray-100 lg:pl-8">
+            <p class="griev-section-title">Pin the Location</p>
+
+            <div class="map-panel space-y-3">
+              <div class="flex gap-2">
+                <input type="text" id="location-search" placeholder="Search for a place…" class="griev-input bg-white">
+                <button type="button" id="location-search-btn"
+                        class="shrink-0 bg-brand-blue hover:bg-brand-blue-dark text-white text-sm font-semibold
+                               px-4 sm:px-5 py-2 rounded-md shadow transition-colors inline-flex items-center gap-1.5">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                  </svg>
+                  <span class="hidden sm:inline">Search</span>
                 </button>
+              </div>
+
+              <div id="grievance-map"></div>
+
+              <button type="button" id="set-current-location-btn"
+                      class="w-full bg-white border border-gray-300 hover:border-brand-blue hover:text-brand-blue
+                             text-gray-700 text-sm font-semibold py-2.5 rounded-md transition-colors
+                             inline-flex items-center justify-center gap-1.5">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Set Current Location
+              </button>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label for="coordinates" class="griev-label">Coordinates</label>
+                  <input type="text" id="coordinates" name="coordinates"
+                         class="griev-input bg-white font-mono text-xs" readonly placeholder="—">
+                </div>
+                <div>
+                  <label for="location" class="griev-label">Address</label>
+                  <input type="text" id="location" name="location"
+                         class="griev-input bg-white" readonly placeholder="—">
+                </div>
+              </div>
+              <p class="text-xs text-gray-400">Click anywhere on the map to drop a pin, or use search / current location above.</p>
             </div>
-        </form>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="flex justify-center mt-10">
+          <button type="submit"
+                  class="bg-brand-blue text-white text-sm font-semibold px-12 py-3 rounded-md shadow-md
+                         hover:bg-brand-blue-dark hover:shadow-lg transition-all">
+            Submit Grievance
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    document.getElementById('location-map-btn').addEventListener('click', function () {
-        console.log('Map icon clicked');
-    });
+document.addEventListener('DOMContentLoaded', function () {
 
-    document.getElementById('attachment').addEventListener('change', function () {
-        const label = document.getElementById('attachment-label');
-        label.textContent = this.files.length ? this.files[0].name : 'Attach an image';
+  /* ══════════════════════════════════════════════════════════
+     MAP  —  MapLibre GL JS + OpenFreeMap tiles
+  ══════════════════════════════════════════════════════════ */
+  var DEFAULT_CENTER = [85.3240, 27.7172]; // Kathmandu
+  var marker = null;
+
+  var map = new maplibregl.Map({
+    container: 'grievance-map',
+    style: 'https://tiles.openfreemap.org/styles/liberty',
+    center: DEFAULT_CENTER,
+    zoom: 12,
+  });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
+  var coordsInput = document.getElementById('coordinates');
+  var locationInput = document.getElementById('location');
+  var searchInput = document.getElementById('location-search');
+
+  function setMarker(lng, lat) {
+    if (marker) marker.remove();
+    marker = new maplibregl.Marker({ color: '#1e3a8a' }).setLngLat([lng, lat]).addTo(map);
+    coordsInput.value = lat.toFixed(6) + ', ' + lng.toFixed(6);
+  }
+
+  function reverseGeocode(lng, lat) {
+    locationInput.value = 'Locating…';
+    fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + lat + '&lon=' + lng)
+      .then(function (r) { return r.json(); })
+      .then(function (data) { locationInput.value = data.display_name || ''; })
+      .catch(function (e) { console.error('Reverse geocode failed:', e); locationInput.value = ''; });
+  }
+
+  map.on('load', function () {
+    setMarker(DEFAULT_CENTER[0], DEFAULT_CENTER[1]);
+  });
+
+  map.on('click', function (e) {
+    var lng = e.lngLat.lng, lat = e.lngLat.lat;
+    setMarker(lng, lat);
+    reverseGeocode(lng, lat);
+  });
+
+  function runSearch() {
+    var q = searchInput.value.trim();
+    if (!q) return;
+    fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (results) {
+        if (!results.length) { alert('Location not found. Try a different search term.'); return; }
+        var lat = parseFloat(results[0].lat), lon = parseFloat(results[0].lon);
+        map.flyTo({ center: [lon, lat], zoom: 15 });
+        setMarker(lon, lat);
+        locationInput.value = results[0].display_name;
+      })
+      .catch(function (e) { console.error('Search failed:', e); alert('Search failed. Please try again.'); });
+  }
+
+  document.getElementById('location-search-btn').addEventListener('click', runSearch);
+  searchInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); runSearch(); }
+  });
+
+  document.getElementById('set-current-location-btn').addEventListener('click', function () {
+    if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        var lat = pos.coords.latitude, lng = pos.coords.longitude;
+        map.flyTo({ center: [lng, lat], zoom: 15 });
+        setMarker(lng, lat);
+        reverseGeocode(lng, lat);
+      },
+      function (err) { console.error(err); alert('Unable to retrieve your current location.'); }
+    );
+  });
+
+  /* ══════════════════════════════════════════════════════════
+     ATTACHMENTS  —  carousel-style multi-image picker
+  ══════════════════════════════════════════════════════════ */
+  var attachedFiles = [];
+  var fileInput  = document.getElementById('attachment-input');
+  var dropZone   = document.getElementById('attachment-drop-zone');
+  var thumbStrip = document.getElementById('attachment-thumbs');
+  var countLabel = document.getElementById('attachment-count');
+
+  function syncFileInput() {
+    var dt = new DataTransfer();
+    attachedFiles.forEach(function (f) { dt.items.add(f); });
+    fileInput.files = dt.files;
+  }
+
+  function updateCountLabel() {
+    var n = attachedFiles.length;
+    countLabel.textContent = n === 0 ? 'No images added' : (n + (n === 1 ? ' image added' : ' images added'));
+  }
+
+  function renderThumbs() {
+    thumbStrip.innerHTML = attachedFiles.map(function (file, idx) {
+      var url = URL.createObjectURL(file);
+      return '' +
+        '<div class="attachment-thumb relative flex-shrink-0">' +
+          '<img src="' + url + '" class="w-24 h-20 sm:w-28 sm:h-24 object-cover rounded-xl border border-gray-200 shadow-sm block">' +
+          '<button type="button" data-idx="' + idx + '" ' +
+                  'class="attachment-remove-btn absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 ' +
+                  'rounded-full flex items-center justify-center shadow-md transition-colors" title="Remove image">' +
+            '<svg class="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">' +
+              '<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>' +
+            '</svg>' +
+          '</button>' +
+        '</div>';
+    }).join('');
+
+    thumbStrip.querySelectorAll('.attachment-remove-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var idx = parseInt(btn.dataset.idx, 10);
+        attachedFiles.splice(idx, 1);
+        syncFileInput();
+        renderThumbs();
+        updateCountLabel();
+      });
     });
+  }
+
+  function addFiles(fileList) {
+    Array.from(fileList).forEach(function (f) {
+      if (f.type.startsWith('image/')) attachedFiles.push(f);
+    });
+    syncFileInput();
+    renderThumbs();
+    updateCountLabel();
+  }
+
+  dropZone.addEventListener('click', function () { fileInput.click(); });
+  fileInput.addEventListener('change', function () { addFiles(fileInput.files); fileInput.value = ''; });
+
+  dropZone.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    dropZone.classList.add('border-brand-blue', 'bg-blue-50');
+  });
+  dropZone.addEventListener('dragleave', function () {
+    dropZone.classList.remove('border-brand-blue', 'bg-blue-50');
+  });
+  dropZone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropZone.classList.remove('border-brand-blue', 'bg-blue-50');
+    addFiles(e.dataTransfer.files);
+  });
+
+});
 </script>
 {% endblock %}
