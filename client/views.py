@@ -15,16 +15,6 @@ from .generators import (
     generate_job_docx,
 )
 
-# Preference categories passed to the signup form
-SIGNUP_PREF_CATEGORIES = [
-    {"value": "govt",   "icon": "🏛️",  "label": "Government Notices", "desc": "Official ministry updates"},
-    {"value": "job",    "icon": "💼",  "label": "Job Opportunities",  "desc": "Vacancies & recruitments"},
-    {"value": "scholar","icon": "🎓",  "label": "Scholarships",       "desc": "Funding & fellowships"},
-    {"value": "events", "icon": "📅",  "label": "Events",             "desc": "Public events & programs"},
-    {"value": "public", "icon": "📢",  "label": "Public Announcements","desc": "General public notices"},
-    {"value": "infra",  "icon": "🏗️",  "label": "Infrastructure",    "desc": "Construction & development"},
-]
-
 # =============================================================================
 # Example Data (Replace with database queries later)
 # =============================================================================
@@ -115,7 +105,6 @@ def login_signup(request):
         # TODO: authenticate(request, username=..., password=...)
         pass
     return render(request, "client/login.html", {
-        "pref_categories": SIGNUP_PREF_CATEGORIES,
         "show_marquee": False,
     })
 
@@ -457,17 +446,6 @@ def profile(request):
         {"key": "new_notice",      "label": "New Notices",          "desc": "Notify when a new notice is published.",          "enabled": True},
         {"key": "grievance_update","label": "Grievance Updates",    "desc": "Notify when your grievance status changes.",      "enabled": True},
         {"key": "new_job",         "label": "New Job Listings",     "desc": "Notify when a new job listing is added.",         "enabled": True},
-        {"key": "email_digest",    "label": "Weekly Email Digest",  "desc": "Receive a weekly summary to your email.",         "enabled": False},
-        {"key": "sms_alerts",      "label": "SMS Alerts",           "desc": "Receive critical updates via SMS.",               "enabled": False},
-    ]
-
-    preference_categories = [
-        {"value": "govt",   "label": "Government Notices",  "selected": True},
-        {"value": "job",    "label": "Job Opportunities",   "selected": True},
-        {"value": "scholar","label": "Scholarships",        "selected": False},
-        {"value": "events", "label": "Events",              "selected": False},
-        {"value": "public", "label": "Public Announcements","selected": True},
-        {"value": "infra",  "label": "Infrastructure",      "selected": False},
     ]
 
     return render(request, "client/profile.html", {
@@ -479,7 +457,6 @@ def profile(request):
         "saved_notices":          saved_notices,
         "saved_jobs":             saved_jobs,
         "notification_settings":  notification_settings,
-        "preference_categories":  preference_categories,
     })
 
 def notifications(request):
