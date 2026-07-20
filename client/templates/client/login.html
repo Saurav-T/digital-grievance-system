@@ -28,6 +28,80 @@
 /* ── Success animation ─────────────────────────────── */
 @keyframes popIn { 0%{transform:scale(0);opacity:0} 70%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
 .success-icon { animation:popIn .5s ease forwards; }
+
+/* ── Profile picture upload (signup step 2) ──────────
+   Same interaction pattern used on the profile page: click/tap
+   the circle to pick a file, hover/focus reveals a camera +
+   label overlay, a small badge hints it's tappable even without
+   hover. Sized smaller here since it's a supporting field, not
+   the page's main subject. */
+.avatar-btn {
+  position: relative;
+  width: 76px; height: 76px;
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  background: #e5e7eb;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: box-shadow .2s ease;
+}
+.avatar-btn:hover, .avatar-btn:focus-visible { box-shadow: 0 4px 14px rgba(30,58,138,.28); }
+.avatar-btn:focus-visible { outline: 2px solid #1e3a8a; outline-offset: 2px; }
+
+.avatar-img, .avatar-placeholder {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+.avatar-img img { width: 100%; height: 100%; object-fit: cover; }
+
+.avatar-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .15rem;
+  background: rgba(17, 24, 39, 0);
+  opacity: 0;
+  transition: opacity .18s ease, background-color .18s ease;
+  color: #fff;
+}
+.avatar-btn:hover .avatar-overlay,
+.avatar-btn:focus-visible .avatar-overlay,
+.avatar-btn.uploading .avatar-overlay {
+  opacity: 1;
+  background: rgba(17, 24, 39, .55);
+}
+.avatar-overlay span {
+  font-size: .5625rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1.1;
+  text-align: center;
+  padding: 0 .3rem;
+}
+
+.avatar-badge {
+  position: absolute;
+  bottom: 0; right: 0;
+  width: 22px; height: 22px;
+  border-radius: 9999px;
+  background: #1e3a8a;
+  border: 2px solid #fff;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  pointer-events: none;
+}
+
+.avatar-spinner {
+  width: 18px; height: 18px;
+  border: 2.5px solid rgba(255,255,255,.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: avatarSpin .7s linear infinite;
+}
+@keyframes avatarSpin { to { transform: rotate(360deg); } }
 </style>
 {% endblock %}
 
@@ -209,6 +283,57 @@
             <h3 class="text-xl font-bold text-gray-900 mb-1">Personal Information</h3>
             <p class="text-sm text-gray-500 mb-6">Help us personalise your experience</p>
 
+            <!-- Profile picture — optional, can be added later from Profile settings -->
+            <div class="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
+              <div class="relative flex-shrink-0">
+                <input type="file" id="s-avatar-input" accept="image/png, image/jpeg, image/webp" class="hidden"
+                       onchange="handleSignupAvatarChange(event)">
+
+                <button type="button" id="s-avatar-btn" class="avatar-btn"
+                        onclick="document.getElementById('s-avatar-input').click()"
+                        title="Add profile picture" aria-label="Add profile picture">
+
+                  <span class="avatar-img" id="s-avatar-img-wrap">
+                    <img id="s-avatar-img" src="" alt="" class="hidden">
+                  </span>
+
+                  <span class="avatar-placeholder text-gray-400" id="s-avatar-placeholder">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8c0 2.208-1.79 4-3.998 4-2.208 0-3.998-1.792-3.998-4s1.79-4 3.998-4c2.208 0 3.998 1.792 3.998 4z"/>
+                    </svg>
+                  </span>
+
+                  <span class="avatar-overlay" id="s-avatar-overlay">
+                    <svg id="s-avatar-camera-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <span>Add Photo</span>
+                  </span>
+                </button>
+
+                <span class="avatar-badge">
+                  <svg class="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  </svg>
+                </span>
+              </div>
+
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-gray-700">
+                  Profile Picture <span class="text-gray-400 font-normal">(optional)</span>
+                </p>
+                <p class="text-xs text-gray-500 mt-0.5">
+                  Add a photo now, or skip it — you can always add one later from your profile settings.
+                </p>
+                <button type="button" id="s-avatar-remove" onclick="removeSignupAvatar()"
+                        class="hidden text-xs font-semibold text-red-500 hover:underline mt-1.5">
+                  Remove photo
+                </button>
+              </div>
+            </div>
+
             <div class="space-y-4">
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1">Phone Number *</label>
@@ -277,6 +402,15 @@
               <div class="flex items-center justify-between mb-3">
                 <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide">Personal Information</h4>
                 <button onclick="gotoStep(2)" class="text-xs text-brand-blue hover:underline font-medium">Edit</button>
+              </div>
+              <div class="flex items-center gap-3 mb-3">
+                <span class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center flex-shrink-0 border border-gray-200">
+                  <img id="rv-avatar-img" src="" alt="" class="hidden w-full h-full object-cover">
+                  <svg id="rv-avatar-placeholder" class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8c0 2.208-1.79 4-3.998 4-2.208 0-3.998-1.792-3.998-4s1.79-4 3.998-4c2.208 0 3.998 1.792 3.998 4z"/>
+                  </svg>
+                </span>
+                <p class="text-xs text-gray-500">Photo: <span id="rv-photo" class="font-medium text-gray-800 ml-1">Not added</span></p>
               </div>
               <div class="space-y-1.5 text-sm">
                 <p><span class="text-gray-500">Phone:</span> <span id="rv-phone" class="font-medium text-gray-900 ml-1">—</span></p>
@@ -407,6 +541,9 @@ function validateStep2() {
   formData.gender  = document.getElementById('s-gender').value;
   formData.address = address;
   formData.city    = city;
+  // Profile picture is optional — formData.avatarFile (if any) was already
+  // set by handleSignupAvatarChange(), so we don't touch it here and never
+  // block continuing just because a photo wasn't added.
   return true;
 }
 
@@ -419,6 +556,9 @@ function populateReview() {
   document.getElementById('rv-dob').textContent    = formData.dob     || '—';
   document.getElementById('rv-gender').textContent = formData.gender  || '—';
   document.getElementById('rv-city').textContent   = formData.city    || '—';
+
+  var rvPhoto = document.getElementById('rv-photo');
+  rvPhoto.textContent = formData.avatarFile ? 'Added' : 'Not added (can add later)';
 }
 
 // ── Create account ────────────────────────────────────────
@@ -426,7 +566,12 @@ function createAccount() {
   if (!document.getElementById('terms-cb').checked) {
     alert('Please accept the Terms & Conditions to continue.'); return;
   }
-  // TODO: POST /api/auth/register/ with formData
+  // TODO: POST /api/auth/register/ with formData.
+  // If formData.avatarFile is set, send as multipart/form-data, e.g.:
+  //   var fd = new FormData();
+  //   Object.keys(formData).forEach(k => { if (k !== 'avatarFile') fd.append(k, formData[k]); });
+  //   if (formData.avatarFile) fd.append('avatar', formData.avatarFile);
+  //   fetch('/api/auth/register/', { method:'POST', body: fd, headers: {'X-CSRFToken': getCsrfToken()} })
   // On success: show success pane; on error: show inline error
   document.getElementById('success-msg').textContent =
     'Welcome, ' + formData.name + '! Your account has been created successfully.';
@@ -519,6 +664,81 @@ function formatPhone(inp) {
   var v=inp.value.replace(/[^\d+]/g,'');
   if(v&&!v.startsWith('+'))v='+977 '+v.replace(/^977/,'');
   inp.value=v;
+}
+
+/* ── Profile picture upload (step 2) ─────────────────────────
+   Entirely optional: the "Continue" button in step 2 never checks
+   for a photo, so people can freely skip this and add one later
+   from their profile page. If they do pick a file, we validate it,
+   preview it inline, mirror it into the review step thumbnail, and
+   stash the raw File on formData so createAccount() can send it. */
+function handleSignupAvatarChange(event) {
+  var file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    alert('Please choose an image file (JPG, PNG, or WEBP).');
+    event.target.value = '';
+    return;
+  }
+  var maxSizeMB = 5;
+  if (file.size > maxSizeMB * 1024 * 1024) {
+    alert('Image is too large. Please choose a file under ' + maxSizeMB + 'MB.');
+    event.target.value = '';
+    return;
+  }
+
+  var btn = document.getElementById('s-avatar-btn');
+  var overlay = document.getElementById('s-avatar-overlay');
+  var cameraIcon = document.getElementById('s-avatar-camera-icon');
+
+  btn.classList.add('uploading');
+  overlay.innerHTML = '<span class="avatar-spinner"></span>';
+
+  var reader = new FileReader();
+  reader.onload = function (e) {
+    var img = document.getElementById('s-avatar-img');
+    var placeholder = document.getElementById('s-avatar-placeholder');
+    img.src = e.target.result;
+    img.classList.remove('hidden');
+    placeholder.style.display = 'none';
+
+    // Mirror into the review-step thumbnail too
+    var rvImg = document.getElementById('rv-avatar-img');
+    var rvPlaceholder = document.getElementById('rv-avatar-placeholder');
+    if (rvImg) { rvImg.src = e.target.result; rvImg.classList.remove('hidden'); }
+    if (rvPlaceholder) rvPlaceholder.style.display = 'none';
+
+    formData.avatarFile = file;
+    document.getElementById('s-avatar-remove').classList.remove('hidden');
+
+    setTimeout(function () {
+      btn.classList.remove('uploading');
+      overlay.innerHTML = cameraIcon.outerHTML + '<span>Change Photo</span>';
+    }, 300);
+  };
+  reader.onerror = function () {
+    btn.classList.remove('uploading');
+    overlay.innerHTML = cameraIcon.outerHTML + '<span>Add Photo</span>';
+    alert('Could not read that image. Please try a different file.');
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeSignupAvatar() {
+  delete formData.avatarFile;
+
+  var img = document.getElementById('s-avatar-img');
+  img.src = '';
+  img.classList.add('hidden');
+  document.getElementById('s-avatar-placeholder').style.display = '';
+  document.getElementById('s-avatar-input').value = '';
+  document.getElementById('s-avatar-remove').classList.add('hidden');
+
+  var rvImg = document.getElementById('rv-avatar-img');
+  var rvPlaceholder = document.getElementById('rv-avatar-placeholder');
+  if (rvImg) { rvImg.src = ''; rvImg.classList.add('hidden'); }
+  if (rvPlaceholder) rvPlaceholder.style.display = '';
 }
 </script>
 {% endblock %}
