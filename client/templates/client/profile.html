@@ -38,6 +38,82 @@
 .toggle-sw .slider::after { content:''; position:absolute; left:3px; top:3px; width:18px; height:18px;
                              background:#fff; border-radius:50%; transition:transform .2s; }
 .toggle-sw input:checked + .slider::after { transform:translateX(20px); }
+
+/* ── Avatar upload ──────────────────────────────────────
+   Circular button that hosts the photo + placeholder icon.
+   A dark overlay with a camera glyph and label fades in on
+   hover/focus so the affordance is obvious without cluttering
+   the header when the user isn't interacting with it. */
+.avatar-btn {
+  position: relative;
+  width: 96px; height: 96px;
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 4px solid #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,.12);
+  background: #e5e7eb;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: box-shadow .2s ease;
+}
+@media (min-width: 640px) { .avatar-btn { width: 112px; height: 112px; } }
+.avatar-btn:hover, .avatar-btn:focus-visible { box-shadow: 0 4px 16px rgba(30,58,138,.28); }
+.avatar-btn:focus-visible { outline: 2px solid #1e3a8a; outline-offset: 2px; }
+
+.avatar-img, .avatar-placeholder {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+.avatar-img img { width: 100%; height: 100%; object-fit: cover; }
+
+.avatar-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .2rem;
+  background: rgba(17, 24, 39, 0);
+  opacity: 0;
+  transition: opacity .18s ease, background-color .18s ease;
+  color: #fff;
+}
+.avatar-btn:hover .avatar-overlay,
+.avatar-btn:focus-visible .avatar-overlay,
+.avatar-btn.uploading .avatar-overlay {
+  opacity: 1;
+  background: rgba(17, 24, 39, .55);
+}
+.avatar-overlay span {
+  font-size: .625rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1.15;
+  text-align: center;
+  padding: 0 .35rem;
+}
+
+/* Small camera badge, always visible for discoverability even without hover */
+.avatar-badge {
+  position: absolute;
+  bottom: 2px; right: 2px;
+  width: 28px; height: 28px;
+  border-radius: 9999px;
+  background: #1e3a8a;
+  border: 2.5px solid #fff;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  pointer-events: none;
+}
+
+/* Spinner shown briefly while a selected image is processed */
+.avatar-spinner {
+  width: 22px; height: 22px;
+  border: 2.5px solid rgba(255,255,255,.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: avatarSpin .7s linear infinite;
+}
+@keyframes avatarSpin { to { transform: rotate(360deg); } }
 </style>
 {% endblock %}
 
@@ -66,12 +142,44 @@
   <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
     <div class="flex flex-col sm:flex-row gap-5 items-start sm:items-center">
 
-      <!-- Avatar -->
-      <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gray-200 flex items-center
-                  justify-center flex-shrink-0 border-4 border-white shadow-md">
-        <svg class="w-14 h-14 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8c0 2.208-1.79 4-3.998 4-2.208 0-3.998-1.792-3.998-4s1.79-4 3.998-4c2.208 0 3.998 1.792 3.998 4z"/>
-        </svg>
+      <!-- Avatar (click or press Enter to change photo) -->
+      <div class="relative flex-shrink-0">
+        <input type="file" id="avatar-input" accept="image/png, image/jpeg, image/webp" class="hidden"
+               onchange="handleAvatarChange(event)">
+
+        <button type="button" id="avatar-btn" class="avatar-btn"
+                onclick="document.getElementById('avatar-input').click()"
+                title="Change profile picture" aria-label="Change profile picture">
+
+          <span class="avatar-img" id="avatar-img-wrap">
+            {% if profile.avatar_url %}
+            <img id="avatar-img" src="{{ profile.avatar_url }}" alt="{{ profile.name|default:'Profile' }}">
+            {% else %}
+            <img id="avatar-img" src="" alt="" class="hidden">
+            {% endif %}
+          </span>
+
+          <span class="avatar-placeholder text-gray-400" id="avatar-placeholder" {% if profile.avatar_url %}style="display:none"{% endif %}>
+            <svg class="w-14 h-14" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8c0 2.208-1.79 4-3.998 4-2.208 0-3.998-1.792-3.998-4s1.79-4 3.998-4c2.208 0 3.998 1.792 3.998 4z"/>
+            </svg>
+          </span>
+
+          <span class="avatar-overlay" id="avatar-overlay">
+            <svg id="avatar-camera-icon" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span>Change Profile Picture</span>
+          </span>
+        </button>
+
+        <span class="avatar-badge">
+          <svg class="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </span>
       </div>
 
       <!-- Info -->
@@ -435,24 +543,6 @@
           </div>
         </div>
 
-        <!-- Notice Category Preferences -->
-        <div>
-          <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">Notice Category Preferences</h3>
-          <p class="text-xs text-gray-500 mb-3">Select the types of notices you want to see in your feed.</p>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {% for cat in preference_categories %}
-            <label class="flex items-center gap-2.5 p-3 bg-gray-50 border border-gray-200
-                          rounded-xl cursor-pointer hover:border-brand-blue hover:bg-blue-50 transition-colors">
-              <input type="checkbox" class="accent-brand-blue" {% if cat.selected %}checked{% endif %}
-                     onchange="savePrefCategory('{{ cat.value }}',this.checked)">
-              <div>
-                <p class="text-xs font-semibold text-gray-800">{{ cat.label }}</p>
-              </div>
-            </label>
-            {% endfor %}
-          </div>
-        </div>
-
         <!-- Account actions -->
         <div class="mt-8 pt-6 border-t border-gray-200">
           <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">Account</h3>
@@ -592,6 +682,65 @@ function saveNotifSetting(key, val) {
 function savePrefCategory(cat, val) {
   // TODO: POST /api/settings/preferences/ { category: cat, selected: val }
   console.log('Preference:', cat, val);
+}
+
+/* ── Avatar upload ─────────────────────────────────────────────
+   Click the circular avatar (or the input it triggers) to pick an
+   image. We validate type/size, show a brief spinner while the
+   file is read, then swap in a live preview. The actual upload to
+   the server is left as a TODO fetch call — wire it to whatever
+   endpoint stores the avatar for this account. */
+function handleAvatarChange(event) {
+  var file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    alert('Please choose an image file (JPG, PNG, or WEBP).');
+    event.target.value = '';
+    return;
+  }
+  var maxSizeMB = 5;
+  if (file.size > maxSizeMB * 1024 * 1024) {
+    alert('Image is too large. Please choose a file under ' + maxSizeMB + 'MB.');
+    event.target.value = '';
+    return;
+  }
+
+  var btn = document.getElementById('avatar-btn');
+  var overlay = document.getElementById('avatar-overlay');
+  var cameraIcon = document.getElementById('avatar-camera-icon');
+
+  btn.classList.add('uploading');
+  overlay.innerHTML = '<span class="avatar-spinner"></span>';
+
+  var reader = new FileReader();
+  reader.onload = function (e) {
+    var img = document.getElementById('avatar-img');
+    var placeholder = document.getElementById('avatar-placeholder');
+    img.src = e.target.result;
+    img.classList.remove('hidden');
+    placeholder.style.display = 'none';
+
+    // TODO: upload to server, e.g.:
+    // var formData = new FormData();
+    // formData.append('avatar', file);
+    // fetch('/api/profile/avatar/', { method: 'POST', body: formData,
+    //   headers: { 'X-CSRFToken': getCsrfToken() } })
+    //   .then(r => r.json())
+    //   .then(data => { /* data.avatar_url now persisted */ })
+    //   .catch(() => alert('Could not upload photo. Please try again.'));
+
+    setTimeout(function () {
+      btn.classList.remove('uploading');
+      overlay.innerHTML = cameraIcon.outerHTML + '<span>Change Profile Picture</span>';
+    }, 350);
+  };
+  reader.onerror = function () {
+    btn.classList.remove('uploading');
+    overlay.innerHTML = cameraIcon.outerHTML + '<span>Change Profile Picture</span>';
+    alert('Could not read that image. Please try a different file.');
+  };
+  reader.readAsDataURL(file);
 }
 
 /* ── Escape to close modal ─────────────────────────────────── */
