@@ -22,5 +22,7 @@ Thumbs.db
 *.log
 
 # Django collected static files
-staticfiles/db.sqlite3
-db.sqlite3 
+staticfiles/
+
+# Database
+db.sqlite3
