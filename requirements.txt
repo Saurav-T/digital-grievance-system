@@ -11,4 +11,4 @@ python-docx==1.1.2
 docxtpl==0.16.2
 
 # Image handling (required for ImageField)
-Pillow==11.1.0
+Pillow==11.3.0
