@@ -3,6 +3,14 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.utils import timezone
 
 
+GENDER_CHOICES = [
+    ("Male", "Male"),
+    ("Female", "Female"),
+    ("Other", "Other"),
+    ("Prefer not to say", "Prefer not to say"),
+]
+
+
 # ---------------------------------------------------------------------------
 # Custom User
 # ---------------------------------------------------------------------------
@@ -25,14 +33,20 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    first_name   = models.CharField(max_length=100)
-    last_name    = models.CharField(max_length=100)
-    email        = models.EmailField(unique=True)
-    phone_number = models.CharField(max_length=20, blank=True)
-    is_active    = models.BooleanField(default=True)
-    is_staff     = models.BooleanField(default=False)
-    date_joined  = models.DateTimeField(default=timezone.now)
-    # last_login is provided automatically by AbstractBaseUser
+    first_name      = models.CharField(max_length=100)
+    last_name       = models.CharField(max_length=100)
+    email           = models.EmailField(unique=True)
+    username        = models.CharField(max_length=30, unique=True, null=True, blank=True)
+    phone_number    = models.CharField(max_length=20, blank=True)
+    dob             = models.DateField(null=True, blank=True)
+    gender          = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
+    address         = models.CharField(max_length=255, blank=True)
+    municipality    = models.CharField(max_length=150, blank=True)
+    profile_picture = models.ImageField(upload_to="profile_pictures/", null=True, blank=True)
+    user_type       = models.CharField(max_length=20, default="Citizen")  # "Citizen" or "Staff"
+    is_active       = models.BooleanField(default=True)
+    is_staff        = models.BooleanField(default=False)
+    date_joined     = models.DateTimeField(default=timezone.now)
 
     objects = UserManager()
 
@@ -45,6 +59,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}".strip()
+
+    @property
+    def avatar_url(self):
+        return self.profile_picture.url if self.profile_picture else None
 
     def __str__(self):
         return self.email
@@ -109,7 +127,6 @@ class Grievance(models.Model):
     def __str__(self):
         return self.subject
 
-    # Convenience: priority badge colour used in templates
     @property
     def priority_colour(self):
         return {
@@ -130,12 +147,20 @@ class Grievance(models.Model):
 
 
 # ---------------------------------------------------------------------------
-# Notice
+# Notice (Updated with category)
 # ---------------------------------------------------------------------------
 
 class Notice(models.Model):
+    CATEGORY_CHOICES = [
+        ("jobs", "Jobs"),
+        ("government", "Government"),
+        ("scholarships", "Scholarships"),
+        ("events", "Events"),
+        ("general", "General"),
+    ]
     title       = models.CharField(max_length=255)
     description = models.TextField()
+    category    = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="general")
     image       = models.ImageField(upload_to="notices/", null=True, blank=True)
     issue_date  = models.DateTimeField()
     created_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="notices")
@@ -210,6 +235,7 @@ class GrievanceStatusHistory(models.Model):
     def __str__(self):
         return f"#{self.grievance_id} → {self.status}"
 
+
 class CarouselImage(models.Model):
     image      = models.ImageField(upload_to='carousel/')
     caption    = models.CharField(max_length=255, blank=True)
@@ -231,3 +257,46 @@ class CarouselImage(models.Model):
         if self.image and os.path.isfile(self.image.path):
             os.remove(self.image.path)
         super().delete(*args, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Saved items, notice views, notification preferences
+# ---------------------------------------------------------------------------
+
+class SavedNotice(models.Model):
+    user       = models.ForeignKey(User, on_delete=models.CASCADE, related_name="saved_notices")
+    notice     = models.ForeignKey(Notice, on_delete=models.CASCADE, related_name="saved_by")
+    saved_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "saved_notices"
+        unique_together = ("user", "notice")
+
+
+class SavedJobListing(models.Model):
+    user       = models.ForeignKey(User, on_delete=models.CASCADE, related_name="saved_jobs")
+    job        = models.ForeignKey(JobListing, on_delete=models.CASCADE, related_name="saved_by")
+    saved_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "saved_job_listings"
+        unique_together = ("user", "job")
+
+
+class NoticeView(models.Model):
+    user      = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notice_views")
+    notice    = models.ForeignKey(Notice, on_delete=models.CASCADE, related_name="views")
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "notice_views"
+
+
+class NotificationPreference(models.Model):
+    user              = models.OneToOneField(User, on_delete=models.CASCADE, related_name="notification_pref")
+    new_notices       = models.BooleanField(default=True)
+    grievance_updates = models.BooleanField(default=True)
+    new_job_listings  = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "notification_preferences"
