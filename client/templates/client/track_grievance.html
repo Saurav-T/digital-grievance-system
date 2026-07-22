@@ -124,7 +124,7 @@
                          focus:outline-none focus:ring-2 focus:ring-brand-blue appearance-none cursor-pointer">
             <option value="">All Statuses</option>
             <option value="pending" {% if request.GET.filter == 'pending' %}selected{% endif %}>Pending</option>
-            <option value="in_progress" {% if request.GET.filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+            <option value="in_progress" {% if request.GET.filter == 'in_progress' %}selected{% endif %}>In Review</option>
             <option value="resolved" {% if request.GET.filter == 'resolved' %}selected{% endif %}>Resolved</option>
             <option value="rejected" {% if request.GET.filter == 'rejected' %}selected{% endif %}>Rejected</option>
           </select>
@@ -161,22 +161,22 @@
             <tr class="cursor-pointer" onclick="window.location.href='{% url 'grievance_detail' grievance.id %}'">
               <td class="font-mono text-xs text-gray-400">#{{ grievance.id }}</td>
               <td class="max-w-xs truncate font-medium text-gray-800" title="{{ grievance.subject }}">{{ grievance.subject }}</td>
-              <td class="text-gray-500 text-xs">{{ grievance.get_category_display|default:"—" }}</td>
+              <td class="text-gray-500 text-xs">{{ grievance.category.name|default:"—" }}</td>
               <td>
                 <span class="badge
-                  {% if grievance.priority == 'high' %}bg-red-50 text-red-700
-                  {% elif grievance.priority == 'medium' %}bg-yellow-50 text-yellow-700
+                  {% if grievance.priority == 'High' or grievance.priority == 'Critical' %}bg-red-50 text-red-700
+                  {% elif grievance.priority == 'Medium' %}bg-yellow-50 text-yellow-700
                   {% else %}bg-gray-100 text-gray-600{% endif %}">
-                  {{ grievance.get_priority_display }}
+                  {{ grievance.priority }}
                 </span>
               </td>
               <td>
                 <span class="badge
-                  {% if grievance.status == 'resolved' %}bg-green-50 text-green-700
-                  {% elif grievance.status == 'rejected' %}bg-red-50 text-red-700
-                  {% elif grievance.status == 'in_progress' %}bg-blue-50 text-blue-700
+                  {% if grievance.status == 'Resolved' %}bg-green-50 text-green-700
+                  {% elif grievance.status == 'Rejected' %}bg-red-50 text-red-700
+                  {% elif grievance.status == 'In Review' %}bg-blue-50 text-blue-700
                   {% else %}bg-gray-100 text-gray-600{% endif %}">
-                  {{ grievance.get_status_display }}
+                  {{ grievance.status }}
                 </span>
               </td>
               <td class="text-xs text-gray-500 whitespace-nowrap">{{ grievance.created_at|date:"d M Y" }}</td>
