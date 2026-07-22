@@ -39,11 +39,7 @@
                              background:#fff; border-radius:50%; transition:transform .2s; }
 .toggle-sw input:checked + .slider::after { transform:translateX(20px); }
 
-/* ── Avatar upload ──────────────────────────────────────
-   Circular button that hosts the photo + placeholder icon.
-   A dark overlay with a camera glyph and label fades in on
-   hover/focus so the affordance is obvious without cluttering
-   the header when the user isn't interacting with it. */
+/* ── Avatar upload ──────────────────────────────────── */
 .avatar-btn {
   position: relative;
   width: 96px; height: 96px;
@@ -92,7 +88,6 @@
   padding: 0 .35rem;
 }
 
-/* Small camera badge, always visible for discoverability even without hover */
 .avatar-badge {
   position: absolute;
   bottom: 2px; right: 2px;
@@ -105,7 +100,6 @@
   pointer-events: none;
 }
 
-/* Spinner shown briefly while a selected image is processed */
 .avatar-spinner {
   width: 22px; height: 22px;
   border: 2.5px solid rgba(255,255,255,.35);
@@ -281,8 +275,8 @@
                 </svg>
               </div>
             </div>
-            <p class="text-3xl font-bold text-gray-900">10</p>
-            <p class="text-xs text-gray-500 mt-1">This Month: <span class="font-semibold text-gray-700">5</span></p>
+            <p class="text-3xl font-bold text-gray-900">{{ grievances_total }}</p>
+            <p class="text-xs text-gray-500 mt-1">This Month: <span class="font-semibold text-gray-700">{{ grievances_this_month }}</span></p>
           </div>
           <div class="stat-card">
             <div class="flex items-start justify-between mb-2">
@@ -293,7 +287,7 @@
                 </svg>
               </div>
             </div>
-            <p class="text-3xl font-bold text-gray-900">2</p>
+            <p class="text-3xl font-bold text-gray-900">{{ resolved_count }}</p>
           </div>
           <div class="stat-card">
             <div class="flex items-start justify-between mb-2">
@@ -304,7 +298,7 @@
                 </svg>
               </div>
             </div>
-            <p class="text-3xl font-bold text-gray-900">8</p>
+            <p class="text-3xl font-bold text-gray-900">{{ pending_count }}</p>
           </div>
           <div class="stat-card">
             <div class="flex items-start justify-between mb-2">
@@ -315,7 +309,7 @@
                 </svg>
               </div>
             </div>
-            <p class="text-3xl font-bold text-gray-900">8</p>
+            <p class="text-3xl font-bold text-gray-900">{{ saved_notices_count }}</p>
           </div>
         </div>
 
@@ -342,18 +336,14 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
+                  {% for cat in category_analytics %}
                   <tr>
-                    <td class="px-4 py-3 font-semibold text-gray-800">Infrastructure</td>
-                    <td class="px-4 py-3 text-right font-bold text-brand-blue">90%</td>
+                    <td class="px-4 py-3 font-semibold text-gray-800">{{ cat.label }}</td>
+                    <td class="px-4 py-3 text-right font-bold text-brand-blue">{{ cat.pct }}%</td>
                   </tr>
-                  <tr>
-                    <td class="px-4 py-3 font-semibold text-gray-800">Electricity</td>
-                    <td class="px-4 py-3 text-right font-bold text-brand-blue">5%</td>
-                  </tr>
-                  <tr>
-                    <td class="px-4 py-3 font-semibold text-gray-800">Others</td>
-                    <td class="px-4 py-3 text-right font-bold text-brand-blue">5%</td>
-                  </tr>
+                  {% empty %}
+                  <tr><td colspan="2" class="px-4 py-6 text-center text-gray-400 text-sm">No grievances submitted yet.</td></tr>
+                  {% endfor %}
                 </tbody>
               </table>
             </div>
@@ -366,7 +356,7 @@
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-xs text-gray-500 font-medium">Average Resolution Time</p>
-                  <p class="text-xl font-bold text-gray-900 mt-0.5">4.8 Days</p>
+                  <p class="text-xl font-bold text-gray-900 mt-0.5">{{ avg_resolution_days }} Days</p>
                 </div>
                 <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                   <svg class="h-5 w-5 text-brand-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -377,11 +367,11 @@
               <div class="border-t border-gray-200 pt-3 grid grid-cols-2 gap-3">
                 <div>
                   <p class="text-xs text-gray-500">Fastest</p>
-                  <p class="text-lg font-bold text-green-600 mt-0.5">1 Day</p>
+                  <p class="text-lg font-bold text-green-600 mt-0.5">{{ fastest_resolution_days }} Days</p>
                 </div>
                 <div>
                   <p class="text-xs text-gray-500">Longest</p>
-                  <p class="text-lg font-bold text-red-500 mt-0.5">13 Days</p>
+                  <p class="text-lg font-bold text-red-500 mt-0.5">{{ longest_resolution_days }} Days</p>
                 </div>
               </div>
             </div>
@@ -416,6 +406,8 @@
                 </div>
                 <span class="text-sm font-bold text-gray-700 w-10 text-right flex-shrink-0">{{ item.pct }}%</span>
               </div>
+              {% empty %}
+              <p class="text-sm text-gray-400">View some notices to see your interests here.</p>
               {% endfor %}
             </div>
           </div>
@@ -451,7 +443,7 @@
           <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Notices</h3>
           <div class="space-y-3">
             {% for notice in saved_notices %}
-            <div class="saved-item flex items-start justify-between gap-4">
+            <div class="saved-item flex items-start justify-between gap-4" onclick="window.location.href='/notices/{{ notice.id }}/'">
               <div class="flex items-start gap-3 min-w-0">
                 <div class="w-10 h-10 rounded-lg bg-brand-blue flex items-center justify-center flex-shrink-0">
                   <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -463,7 +455,7 @@
                   <p class="text-xs text-gray-500 mt-0.5">{{ notice.date }}</p>
                 </div>
               </div>
-              <button onclick="unsaveItem('notice','{{ notice.id }}')" title="Remove"
+              <button onclick="event.stopPropagation(); unsaveItem('notice','{{ notice.id }}', this)" title="Remove"
                       class="flex-shrink-0 p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
@@ -488,7 +480,7 @@
           <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Job Listings</h3>
           <div class="space-y-3">
             {% for job in saved_jobs %}
-            <div class="saved-item flex items-start justify-between gap-4">
+            <div class="saved-item flex items-start justify-between gap-4" onclick="window.location.href='/jobs/{{ job.id }}/'">
               <div class="flex items-start gap-3 min-w-0">
                 <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
                   <img src="{% static 'client/img/emblem.png' %}" alt="Emblem" class="h-7 w-7 object-contain">
@@ -498,7 +490,7 @@
                   <p class="text-xs text-gray-500">{{ job.department }} · Deadline: {{ job.deadline }}</p>
                 </div>
               </div>
-              <button onclick="unsaveItem('job','{{ job.id }}')" title="Remove"
+              <button onclick="event.stopPropagation(); unsaveItem('job','{{ job.id }}', this)" title="Remove"
                       class="flex-shrink-0 p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
@@ -604,7 +596,7 @@ function switchTab(id, btn) {
   if (id === 'activity') initActivityChart();
 }
 
-/* ── Monthly Activity Chart (Chart.js) ────────────────────── */
+/* ── Monthly Activity Chart (Chart.js) — real DB-backed data ── */
 var activityChartInit = false;
 function initActivityChart() {
   if (activityChartInit) return;
@@ -614,11 +606,11 @@ function initActivityChart() {
   new Chart(ctx, {
     type: 'line',
     data: {
-      labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+      labels: {{ activity_labels_json|safe }},
       datasets: [
         {
           label: 'Notices Viewed',
-          data: [8,12,7,15,20,18,25,22,19,28,24,30],
+          data: {{ activity_notices_json|safe }},
           borderColor: '#1e3a8a',
           backgroundColor: 'rgba(30,58,138,.08)',
           borderWidth: 2,
@@ -629,7 +621,7 @@ function initActivityChart() {
         },
         {
           label: 'Grievances Submitted',
-          data: [1,0,2,1,3,0,2,1,0,2,3,1],
+          data: {{ activity_grievances_json|safe }},
           borderColor: '#ef4444',
           backgroundColor: 'rgba(239,68,68,.06)',
           borderWidth: 2,
@@ -654,6 +646,12 @@ function initActivityChart() {
   });
 }
 
+/* ── CSRF helper ──────────────────────────────────────────── */
+function getCookie(name) {
+  var v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+
 /* ── Edit profile modal ─────────────────────────────────────── */
 function openEditProfile()  { document.getElementById('edit-profile-modal').classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
 function closeEditProfile() { document.getElementById('edit-profile-modal').classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
@@ -661,35 +659,36 @@ function closeEditProfile() { document.getElementById('edit-profile-modal').clas
 /* ── Sign out ─────────────────────────────────────────────── */
 function signOut() {
   if (confirm('Are you sure you want to sign out?')) {
-    // TODO: POST /auth/logout/ with CSRF token
-    window.location.href = '/login/';
+    window.location.href = '{% url "client_logout" %}';
   }
 }
 
-/* ── Unsave item ────────────────────────────────────────────── */
-function unsaveItem(type, id) {
-  if (confirm('Remove this ' + type + ' from saved?')) {
-    // TODO: POST /api/saved/remove/ { type, id }
-    alert('Removed! (Demo only — page will reload after backend integration)');
-  }
+/* ── Unsave item (real server call) ────────────────────────── */
+function unsaveItem(type, id, btnEl) {
+  var url = type === 'notice' ? '/api/notices/' + id + '/save/' : '/api/jobs/' + id + '/save/';
+  fetch(url, { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') } })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data && data.saved === false) {
+        var card = btnEl.closest('.saved-item');
+        if (card) card.remove();
+      }
+    })
+    .catch(function () { alert('Could not remove item. Please try again.'); });
 }
 
-/* ── Settings ─────────────────────────────────────────────── */
+/* ── Settings (real server call) ───────────────────────────── */
 function saveNotifSetting(key, val) {
-  // TODO: POST /api/settings/notifications/ { key, enabled: val }
-  console.log('Notification setting:', key, val);
-}
-function savePrefCategory(cat, val) {
-  // TODO: POST /api/settings/preferences/ { category: cat, selected: val }
-  console.log('Preference:', cat, val);
+  fetch('/api/notifications/settings/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': getCookie('csrftoken') },
+    body: 'key=' + encodeURIComponent(key) + '&enabled=' + val,
+  }).catch(function (e) { console.error('Failed to save setting', e); });
 }
 
 /* ── Avatar upload ─────────────────────────────────────────────
-   Click the circular avatar (or the input it triggers) to pick an
-   image. We validate type/size, show a brief spinner while the
-   file is read, then swap in a live preview. The actual upload to
-   the server is left as a TODO fetch call — wire it to whatever
-   endpoint stores the avatar for this account. */
+   Preview only in this version; wire the TODO fetch below to a
+   dedicated avatar-upload endpoint to persist the change. */
 function handleAvatarChange(event) {
   var file = event.target.files && event.target.files[0];
   if (!file) return;
@@ -723,11 +722,10 @@ function handleAvatarChange(event) {
 
     // TODO: upload to server, e.g.:
     // var formData = new FormData();
-    // formData.append('avatar', file);
+    // formData.append('profile_picture', file);
     // fetch('/api/profile/avatar/', { method: 'POST', body: formData,
-    //   headers: { 'X-CSRFToken': getCsrfToken() } })
+    //   headers: { 'X-CSRFToken': getCookie('csrftoken') } })
     //   .then(r => r.json())
-    //   .then(data => { /* data.avatar_url now persisted */ })
     //   .catch(() => alert('Could not upload photo. Please try again.'));
 
     setTimeout(function () {
