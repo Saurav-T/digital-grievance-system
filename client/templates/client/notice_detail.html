@@ -16,13 +16,7 @@
 #detail-bookmark-btn.saved svg, .save-card-btn.saved svg { fill: #1e3a8a; stroke: #1e3a8a; }
 #detail-bookmark-btn:not(.saved) svg, .save-card-btn:not(.saved) svg { fill: none; stroke: currentColor; }
 
-#detail-bookmark-btn {
-  background: transparent;
-  border: none;
-  padding: 0;
-  color: #1e3a8a;
-}
-#detail-bookmark-btn:hover { transform: scale(1.08); }
+#detail-bookmark-btn:hover { transform: scale(1.05); }
 
 .save-card-btn {
   position: absolute;
@@ -84,13 +78,14 @@
         <button id="detail-bookmark-btn"
                 data-notice-id="{{ notice.id }}"
                 data-notice-title="{{ notice.title|escape }}"
-                aria-label="Save this notice"
-                title="Save notice"
+                aria-label="{% if notice.is_saved %}Remove bookmark{% else %}Save this notice{% endif %}"
+                title="{% if notice.is_saved %}Remove bookmark{% else %}Save notice{% endif %}"
                 class="flex-shrink-0 mt-0.5 p-2 rounded-lg border border-gray-200 bg-white
                        hover:bg-blue-50 hover:border-brand-blue text-gray-400
-                       hover:text-brand-blue transition-all duration-200">
+                       hover:text-brand-blue transition-all duration-200 {% if notice.is_saved %}saved{% endif %}">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24"
-               stroke="currentColor" stroke-width="2">
+               stroke="currentColor" stroke-width="2"
+               fill="{% if notice.is_saved %}#1e3a8a{% else %}none{% endif %}">
             <path stroke-linecap="round" stroke-linejoin="round"
                   d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
           </svg>
@@ -291,22 +286,14 @@ function closeMediaModal() { document.getElementById('media-modal').classList.ad
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMediaModal(); });
 
 (function initNoticeBookmark() {
-  const STORAGE_KEY = 'dgnbs_bookmarks';
+  const IS_AUTH = {{ request.user.is_authenticated|yesno:"true,false" }};
+  const LOGIN_URL = '{% url "login" %}';
   const btn = document.getElementById('detail-bookmark-btn');
   const toast = document.getElementById('bm-toast');
 
-  if (!btn) return;
-
-  const noticeId = parseInt(btn.dataset.noticeId, 10);
-  const title = btn.dataset.noticeTitle;
-
-  function getBookmarks() {
-    try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); }
-    catch { return new Set(); }
-  }
-
-  function saveBookmarks(set) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...set])); } catch {}
+  function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
   }
 
   let toastTimer;
@@ -317,49 +304,47 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMediaMo
     toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
   }
 
-  function syncBtn() {
-    const saved = getBookmarks().has(noticeId);
-    btn.classList.toggle('saved', saved);
-    btn.title = saved ? 'Remove bookmark' : 'Save notice';
-    btn.setAttribute('aria-label', saved ? 'Remove bookmark' : 'Save this notice');
+  function toggleSave(id, title, btnEl, syncFn) {
+    if (!IS_AUTH) { window.location.href = LOGIN_URL; return; }
+    fetch('/api/notices/' + id + '/save/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    })
+      .then(r => r.json())
+      .then(data => {
+        const nowSaved = !!data.saved;
+        btnEl.classList.toggle('saved', nowSaved);
+        const svg = btnEl.querySelector('svg');
+        svg.setAttribute('fill', nowSaved ? '#1e3a8a' : 'none');
+        showToast(nowSaved ? `Saved "${title}"` : `Removed "${title}" from saved notices`);
+        if (syncFn) syncFn(nowSaved);
+      })
+      .catch(() => alert('Could not update saved notice. Please try again.'));
   }
 
-  syncBtn();
-
-  btn.addEventListener('click', () => {
-    const bm = getBookmarks();
-    const saved = bm.has(noticeId);
-    if (saved) { bm.delete(noticeId); showToast(`Removed "${title}" from saved notices`); }
-    else { bm.add(noticeId); showToast(`Saved "${title}"`); }
-    saveBookmarks(bm);
-    syncBtn();
-    window.dispatchEvent(new CustomEvent('bookmark-updated', { detail: { id: noticeId, saved: !saved } }));
-  });
+  if (btn) {
+    const noticeId = parseInt(btn.dataset.noticeId, 10);
+    const title = btn.dataset.noticeTitle;
+    btn.addEventListener('click', () => {
+      toggleSave(noticeId, title, btn, saved => {
+        btn.title = saved ? 'Remove bookmark' : 'Save notice';
+        btn.setAttribute('aria-label', saved ? 'Remove bookmark' : 'Save this notice');
+      });
+    });
+  }
 
   document.querySelectorAll('.save-card-btn').forEach(cardBtn => {
     const cardId = parseInt(cardBtn.dataset.noticeId, 10);
     const cardTitle = cardBtn.dataset.noticeTitle;
-
-    function syncCardBtn() {
-      const saved = getBookmarks().has(cardId);
-      cardBtn.classList.toggle('saved', saved);
-      cardBtn.setAttribute('aria-label', saved ? 'Remove saved notice' : 'Save this notice');
-      cardBtn.setAttribute('title', saved ? 'Remove save' : 'Save notice');
-    }
-
-    syncCardBtn();
-
     cardBtn.addEventListener('click', e => {
       e.preventDefault();
       e.stopPropagation();
-      const bm = getBookmarks();
-      const saved = bm.has(cardId);
-      if (saved) { bm.delete(cardId); showToast(`Removed "${cardTitle}" from saved notices`); }
-      else { bm.add(cardId); showToast(`Saved "${cardTitle}"`); }
-      saveBookmarks(bm);
-      syncCardBtn();
-      if (btn) syncBtn();
-      window.dispatchEvent(new CustomEvent('bookmark-updated', { detail: { id: cardId, saved: !saved } }));
+      toggleSave(cardId, cardTitle, cardBtn, saved => {
+        cardBtn.setAttribute('aria-label', saved ? 'Remove saved notice' : 'Save this notice');
+        cardBtn.setAttribute('title', saved ? 'Remove save' : 'Save notice');
+        const svg = cardBtn.querySelector('svg');
+        svg.setAttribute('fill', saved ? '#ffffff' : 'none');
+      });
     });
   });
 })();
