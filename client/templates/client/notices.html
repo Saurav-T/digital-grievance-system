@@ -126,10 +126,10 @@
           </button>
         </div>
         <div class="space-y-2">
-          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="renewal"> Renewal &amp; Fees</label>
-          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="recruitment"> Recruitment</label>
-          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="holiday"> Public Holiday</label>
-          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="this-month"> This Month</label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="jobs"> Jobs</label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="government"> Government</label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="scholarships"> Scholarships</label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="events"> Events</label>
         </div>
       </div>
     </div>
@@ -162,8 +162,8 @@
 <script>
 (function () {
   const PER_PAGE = 6;
-  const STORAGE_KEY = 'dgnbs_bookmarks';
-  const noticeDataEl = document.getElementById('notice-data');
+  const IS_AUTH = {{ request.user.is_authenticated|yesno:"true,false" }};
+  const LOGIN_URL = '{% url "login" %}';
   const grid = document.getElementById('notice-grid');
   const paginationEl = document.getElementById('notice-pagination');
   const emptyState = document.getElementById('notice-empty-state');
@@ -185,23 +185,9 @@
     console.error('Notice data error', error);
   }
 
-  function getBookmarks() {
-    try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); }
-    catch { return new Set(); }
-  }
-
-  function saveBookmarks(set) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...set])); } catch {}
-  }
-
-  function toggleBookmark(id, title) {
-    const bm = getBookmarks();
-    const saved = bm.has(id);
-    if (saved) { bm.delete(id); showToast(`Removed "${title}" from saved notices`); }
-    else { bm.add(id); showToast(`Saved "${title}"`); }
-    saveBookmarks(bm);
-    window.dispatchEvent(new CustomEvent('bookmark-updated', { detail: { id, saved: !saved } }));
-    return !saved;
+  function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
   }
 
   let toastTimer;
@@ -212,6 +198,26 @@
     toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
   }
 
+  function toggleSave(id, title, btn) {
+    if (!IS_AUTH) { window.location.href = LOGIN_URL; return; }
+    fetch('/api/notices/' + id + '/save/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    })
+      .then(r => r.json())
+      .then(data => {
+        const nowSaved = !!data.saved;
+        btn.classList.toggle('saved', nowSaved);
+        const svg = btn.querySelector('svg');
+        svg.setAttribute('stroke', '#ffffff');
+        svg.setAttribute('fill', nowSaved ? '#ffffff' : 'none');
+        showToast(nowSaved ? `Saved "${title}"` : `Removed "${title}" from saved notices`);
+        const notice = allNotices.find(n => n.id === id);
+        if (notice) notice.is_saved = nowSaved;
+      })
+      .catch(() => alert('Could not update saved notice. Please try again.'));
+  }
+
   function applyFilters() {
     const q = searchInput.value.toLowerCase().trim();
     const active = [...filterChecks].filter(c => c.checked).map(c => c.dataset.filter);
@@ -219,18 +225,7 @@
     filtered = allNotices.filter(notice => {
       const haystack = `${notice.title} ${notice.description} ${notice.category}`.toLowerCase();
       if (q && !haystack.includes(q)) return false;
-
-      if (active.length) {
-        const categoryMatch = active.some(filter => {
-          if (filter === 'renewal') return notice.category === 'renewal';
-          if (filter === 'recruitment') return notice.category === 'recruitment';
-          if (filter === 'holiday') return notice.category === 'holiday';
-          if (filter === 'this-month') return notice.category === 'this-month';
-          return haystack.includes(filter);
-        });
-        if (!categoryMatch) return false;
-      }
-
+      if (active.length && !active.includes(notice.category)) return false;
       return true;
     });
 
@@ -239,7 +234,6 @@
   }
 
   function render() {
-    const bm = getBookmarks();
     const total = filtered.length;
     const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
     currentPage = Math.min(currentPage, totalPages);
@@ -252,7 +246,7 @@
     } else {
       emptyState.classList.add('hidden');
       grid.innerHTML = pageNotices.map(notice => {
-        const isSaved = bm.has(notice.id);
+        const isSaved = !!notice.is_saved;
         const escapedTitle = (notice.title || '').replace(/"/g, '&quot;');
         return `
           <div class="notice-card bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
@@ -264,7 +258,7 @@
               aria-label="${isSaved ? 'Remove saved notice' : 'Save this notice'}"
               title="${isSaved ? 'Remove save' : 'Save notice'}">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2"
-                   stroke="${isSaved ? '#1e3a8a' : '#9ca3af'}" fill="${isSaved ? '#1e3a8a' : 'none'}">
+                   stroke="#ffffff" fill="${isSaved ? '#ffffff' : 'none'}">
                 <path stroke-linecap="round" stroke-linejoin="round"
                       d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
               </svg>
@@ -286,13 +280,7 @@
           e.stopPropagation();
           const id = parseInt(btn.dataset.id, 10);
           const title = btn.dataset.title;
-          const nowSaved = toggleBookmark(id, title);
-          btn.classList.toggle('saved', nowSaved);
-          const svg = btn.querySelector('svg');
-          svg.setAttribute('stroke', nowSaved ? '#1e3a8a' : '#9ca3af');
-          svg.setAttribute('fill', nowSaved ? '#1e3a8a' : 'none');
-          btn.setAttribute('aria-label', nowSaved ? 'Remove saved notice' : 'Save this notice');
-          btn.setAttribute('title', nowSaved ? 'Remove save' : 'Save notice');
+          toggleSave(id, title, btn);
         });
       });
     }
@@ -357,12 +345,6 @@
   searchInput.addEventListener('input', applyFilters);
   searchBtn.addEventListener('click', applyFilters);
   filterChecks.forEach(check => check.addEventListener('change', applyFilters));
-
-  window.addEventListener('storage', () => render());
-  window.addEventListener('bookmark-updated', () => render());
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') render();
-  });
 
   filtered = [...allNotices];
   render();

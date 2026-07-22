@@ -85,15 +85,26 @@
     </ul>
   </nav>
 
-  <!-- Bottom: login + branding (fixed, never scrolls) -->
+  <!-- Bottom: login/logout + branding (fixed, never scrolls) -->
   <div class="px-6 pb-8 mt-4 flex-shrink-0">
-    
-      <a href="{% url 'login' %}"
-      class="block w-full text-center bg-white text-brand-blue font-semibold rounded-lg
-             py-2.5 mb-5 hover:bg-blue-100 transition-colors"
-    >
+    {% if request.user.is_authenticated %}
+    <a href="{% url 'profile' %}"
+       class="block w-full text-center bg-white text-brand-blue font-semibold rounded-lg
+              py-2.5 mb-3 hover:bg-blue-100 transition-colors">
+      My Profile
+    </a>
+    <a href="{% url 'client_logout' %}"
+       class="block w-full text-center bg-white/10 text-white font-semibold rounded-lg
+              py-2.5 mb-5 hover:bg-white/20 transition-colors">
+      Logout
+    </a>
+    {% else %}
+    <a href="{% url 'login' %}"
+       class="block w-full text-center bg-white text-brand-blue font-semibold rounded-lg
+              py-2.5 mb-5 hover:bg-blue-100 transition-colors">
       Login
     </a>
+    {% endif %}
     <div class="flex items-center gap-3">
       <img src="{% static 'client/img/emblem.png' %}" alt="Emblem"
            class="h-9 w-9 object-contain flex-shrink-0">

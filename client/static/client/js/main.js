@@ -41,41 +41,7 @@ document.addEventListener("DOMContentLoaded", function () {
             setSidebarOpen(false);
         }
     });
-
-    /* ---------- Marquee: randomised notice pool ---------- */
-    const marqueeTrack = document.getElementById("marquee-track");
-
-    if (marqueeTrack && Array.isArray(window.MARQUEE_NOTICES) && window.MARQUEE_NOTICES.length) {
-
-        const pool = [...window.MARQUEE_NOTICES];
-
-        // Fisher-Yates shuffle
-        for (let i = pool.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [pool[i], pool[j]] = [pool[j], pool[i]];
-        }
-
-        function buildItem(text, hidden) {
-            const span = document.createElement("span");
-            span.className = "flex items-center gap-2";
-
-            if (hidden) {
-                span.setAttribute("aria-hidden", "true");
-            }
-
-            const dot = document.createElement("span");
-            dot.className = "h-1.5 w-1.5 rounded-full bg-white/70 inline-block";
-
-            span.appendChild(dot);
-            span.appendChild(document.createTextNode(text));
-
-            return span;
-        }
-
-        pool.forEach((text) => marqueeTrack.appendChild(buildItem(text, false)));
-        pool.forEach((text) => marqueeTrack.appendChild(buildItem(text, true)));
-    }
-
+    
     /* ---------- Hero carousel ---------- */
     const track = document.getElementById("hero-track");
     const dotsWrap = document.getElementById("hero-dots");

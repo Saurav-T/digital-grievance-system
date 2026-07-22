@@ -311,7 +311,6 @@ def admin_profile(request):
 
 # ─────────────────────────────────────────────
 # Users, Categories, Grievances, Notices, Jobs
-# (unchanged from your original file)
 # ─────────────────────────────────────────────
 
 @staff_required
@@ -325,9 +324,11 @@ def users(request):
                     password=request.POST["password"],
                     first_name=request.POST["first_name"],
                     last_name=request.POST["last_name"],
+                    username=request.POST.get("username") or None,
                     phone_number=request.POST.get("phone_number", ""),
                     is_staff=request.POST.get("is_staff") == "on",
                     is_active=request.POST.get("is_active", "on") == "on",
+                    user_type="Citizen",
                 )
                 messages.success(request, "User created successfully.")
 
@@ -336,6 +337,7 @@ def users(request):
                 u.first_name   = request.POST["first_name"]
                 u.last_name    = request.POST["last_name"]
                 u.email        = request.POST["email"]
+                u.username     = request.POST.get("username") or u.username
                 u.phone_number = request.POST.get("phone_number", "")
                 u.is_staff     = request.POST.get("is_staff") == "on"
                 u.is_active    = request.POST.get("is_active", "on") == "on"
@@ -349,12 +351,45 @@ def users(request):
                 u.delete()
                 messages.success(request, "User deleted successfully.")
 
+            elif action == "add_admin":
+                User.objects.create_user(
+                    email=request.POST["email"],
+                    password=request.POST["password"],
+                    first_name=request.POST["first_name"],
+                    last_name=request.POST["last_name"],
+                    phone_number=request.POST.get("phone_number", ""),
+                    is_staff=True,
+                    is_superuser=request.POST.get("is_superuser") == "on",
+                    is_active=request.POST.get("is_active", "on") == "on",
+                    user_type="Staff",
+                )
+                messages.success(request, "Administrator created successfully.")
+
+            elif action == "edit_admin":
+                a = get_object_or_404(User, pk=request.POST["user_id"])
+                a.first_name    = request.POST["first_name"]
+                a.last_name     = request.POST["last_name"]
+                a.email         = request.POST["email"]
+                a.phone_number  = request.POST.get("phone_number", "")
+                a.is_superuser  = request.POST.get("is_superuser") == "on"
+                a.is_active     = request.POST.get("is_active", "on") == "on"
+                if request.POST.get("password"):
+                    a.set_password(request.POST["password"])
+                a.save()
+                messages.success(request, "Administrator updated successfully.")
+
+            elif action == "delete_admin":
+                a = get_object_or_404(User, pk=request.POST["user_id"])
+                a.delete()
+                messages.success(request, "Administrator deleted successfully.")
+
         except Exception as exc:
             messages.error(request, f"Error: {exc}")
         return redirect("admin_panel:users")
 
-    all_users = User.objects.order_by("-date_joined")
-    return render(request, "server/users.html", _ctx("users", users=all_users))
+    all_users = User.objects.filter(is_staff=False).order_by("-date_joined")
+    admins = User.objects.filter(is_staff=True).order_by("-date_joined")
+    return render(request, "server/users.html", _ctx("users", users=all_users, admins=admins))
 
 
 def user_json(request, pk):
@@ -364,8 +399,10 @@ def user_json(request, pk):
         "first_name": u.first_name,
         "last_name": u.last_name,
         "email": u.email,
+        "username": u.username or "",
         "phone_number": u.phone_number,
         "is_staff": u.is_staff,
+        "is_superuser": u.is_superuser,
         "is_active": u.is_active,
     })
 
@@ -604,6 +641,7 @@ def notices(request):
                 n = Notice(
                     title=request.POST["title"],
                     description=request.POST["description"],
+                    category=request.POST.get("category", "general"),
                     issue_date=request.POST["issue_date"],
                     created_by=request.user,
                 )
@@ -616,6 +654,7 @@ def notices(request):
                 n = get_object_or_404(Notice, pk=request.POST["notice_id"])
                 n.title       = request.POST["title"]
                 n.description = request.POST["description"]
+                n.category    = request.POST.get("category", n.category)
                 n.issue_date  = request.POST["issue_date"]
                 if "image" in request.FILES:
                     n.image = request.FILES["image"]
@@ -632,13 +671,16 @@ def notices(request):
         return redirect("admin_panel:notices")
 
     all_notices = Notice.objects.select_related("created_by").order_by("-created_at")
-    return render(request, "server/notices.html", _ctx("notices", notices=all_notices))
+    return render(request, "server/notices.html", _ctx(
+        "notices", notices=all_notices, category_choices=Notice.CATEGORY_CHOICES,
+    ))
 
 
 def notice_json(request, pk):
     n = get_object_or_404(Notice, pk=pk)
     return JsonResponse({
         "id": n.id, "title": n.title, "description": n.description,
+        "category": n.category,
         "issue_date": n.issue_date.strftime("%Y-%m-%dT%H:%M") if n.issue_date else "",
         "image": n.image.url if n.image else "",
         "created_by": n.created_by.get_full_name() if n.created_by else "—",

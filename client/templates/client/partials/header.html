@@ -483,15 +483,9 @@
        Falls back to hardcoded items if not provided.                    */
       var MN = window.MARQUEE_NOTICES || [
         {
-          text: "New Notice: नवीकरण तथा बेरूजु रकम दाखिला",
-          url: "/notices/1/",
+          text: "No New Notices",
+          url: "/notices",
         },
-        { text: "Job Opening: Computer Operator", url: "/jobs/1/" },
-        {
-          text: "Public Holiday Announcement – 7 July 2026",
-          url: "/notices/4/",
-        },
-        { text: "नवीकरण तथा पदस्थापन सम्बन्धी सूचना", url: "/notices/2/" },
       ];
       var trk = document.getElementById("marquee-track");
       if (trk) {

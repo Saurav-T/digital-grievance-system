@@ -26,14 +26,14 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
             <input type="text" id="search-users" oninput="filterTable('search-users','table-users-body')"
-                   placeholder="Search users by name, email or phone…"
+                   placeholder="Search users by name, username, email or phone…"
                    class="adm-input pl-9 text-sm">
         </div>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full admin-table">
             <thead><tr>
-                <th>ID</th><th>Name</th><th>Email</th><th>Phone</th>
+                <th>ID</th><th>Name</th><th>Username</th><th>Email</th><th>Phone</th>
                 <th>Status</th><th>Joined</th><th>Actions</th>
             </tr></thead>
             <tbody id="table-users-body">
@@ -41,6 +41,7 @@
                 <tr>
                     <td class="font-mono text-xs text-gray-400">#{{ u.id }}</td>
                     <td class="font-medium">{{ u.get_full_name }}</td>
+                    <td class="text-gray-500 text-xs">{{ u.username|default:"—" }}</td>
                     <td class="text-gray-600">{{ u.email }}</td>
                     <td>{{ u.phone_number|default:"—" }}</td>
                     <td>
@@ -50,7 +51,7 @@
                     <td class="whitespace-nowrap text-xs text-gray-500">{{ u.date_joined|date:"d M Y" }}</td>
                     <td>
                         <div class="flex flex-wrap gap-1">
-                            <button onclick="loadEdit('/admin-panel/users/{{ u.id }}/json/', 'modal-edit-user', {first_name:'eu-fn',last_name:'eu-ln',email:'eu-em',phone_number:'eu-ph',is_active:'eu-active'}); document.getElementById('eu-id').value='{{ u.id }}'"
+                            <button onclick="loadEdit('/admin-panel/users/{{ u.id }}/json/', 'modal-edit-user', {first_name:'eu-fn',last_name:'eu-ln',username:'eu-username',email:'eu-em',phone_number:'eu-ph',is_active:'eu-active'}); document.getElementById('eu-id').value='{{ u.id }}'"
                                     class="act-btn bg-yellow-50 text-yellow-700 hover:bg-yellow-100">Edit</button>
                             <button onclick="confirmDelete('modal-delete-user','{{ u.id }}','du-id')"
                                     class="act-btn bg-red-50 text-red-700 hover:bg-red-100">Delete</button>
@@ -58,7 +59,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="7" class="text-center py-10 text-gray-400">No users found.</td></tr>
+                <tr><td colspan="8" class="text-center py-10 text-gray-400">No users found.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -151,6 +152,8 @@
                     <input type="text" name="first_name" required class="adm-input"></div>
                 <div><label class="adm-label">Last Name *</label>
                     <input type="text" name="last_name" required class="adm-input"></div>
+                <div class="col-span-2"><label class="adm-label">Username</label>
+                    <input type="text" name="username" class="adm-input" placeholder="e.g. ramsharma123"></div>
                 <div class="col-span-2"><label class="adm-label">Email *</label>
                     <input type="email" name="email" required class="adm-input"></div>
                 <div class="col-span-2"><label class="adm-label">Phone Number</label>
@@ -189,6 +192,8 @@
                     <input type="text" name="first_name" id="eu-fn" required class="adm-input"></div>
                 <div><label class="adm-label">Last Name *</label>
                     <input type="text" name="last_name" id="eu-ln" required class="adm-input"></div>
+                <div class="col-span-2"><label class="adm-label">Username</label>
+                    <input type="text" name="username" id="eu-username" class="adm-input" placeholder="e.g. ramsharma123"></div>
                 <div class="col-span-2"><label class="adm-label">Email *</label>
                     <input type="email" name="email" id="eu-em" required class="adm-input"></div>
                 <div class="col-span-2"><label class="adm-label">Phone Number</label>
@@ -351,7 +356,7 @@
 {% endif %}
 
 <script>
-// ── Client-side table search (name / email / phone) ─────────
+// ── Client-side table search (name / username / email / phone) ─────────
 function filterTable(inputId, tbodyId) {
     var q = document.getElementById(inputId).value.trim().toLowerCase();
     var tbody = document.getElementById(tbodyId);

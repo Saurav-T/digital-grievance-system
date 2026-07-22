@@ -29,12 +29,7 @@
 @keyframes popIn { 0%{transform:scale(0);opacity:0} 70%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
 .success-icon { animation:popIn .5s ease forwards; }
 
-/* ── Profile picture upload (signup step 2) ──────────
-   Same interaction pattern used on the profile page: click/tap
-   the circle to pick a file, hover/focus reveals a camera +
-   label overlay, a small badge hints it's tappable even without
-   hover. Sized smaller here since it's a supporting field, not
-   the page's main subject. */
+/* ── Profile picture upload (signup step 2) ────────── */
 .avatar-btn {
   position: relative;
   width: 76px; height: 76px;
@@ -112,15 +107,28 @@
   <div class="flex-1 flex items-center justify-center px-4 py-10 bg-gray-50">
     <div class="w-full max-w-md">
 
+      {% if messages %}
+      <div class="mb-4 space-y-2">
+        {% for m in messages %}
+        <div class="text-sm rounded-lg px-4 py-3 border
+                    {% if m.tags == 'success' %}bg-green-50 text-green-700 border-green-200
+                    {% else %}bg-red-50 text-red-700 border-red-200{% endif %}">
+          {{ m }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
       <!-- ════ LOGIN PANE ═══════════════════════════════════════════ -->
-      <div id="pane-login" class="bg-white rounded-2xl shadow-lg p-8">
+      <div id="pane-login" class="bg-white rounded-2xl shadow-lg p-8 {% if show_signup %}hidden{% endif %}">
         <div class="text-center mb-8">
           <h2 class="text-2xl font-bold text-gray-900">Welcome Back</h2>
           <p class="text-sm text-gray-500 mt-1">Sign in to your account</p>
         </div>
 
-        <form id="login-form" novalidate>
+        <form id="login-form" method="post" action="{% url 'login' %}" novalidate>
           {% csrf_token %}
+          <input type="hidden" name="form_type" value="login">
           <div class="mb-4">
             <label class="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
             <input type="email" name="email" placeholder="you@example.com"
@@ -154,14 +162,14 @@
 
         <div class="mt-6 text-center text-sm text-gray-500">
           Don't have an account?
-          <button onclick="showSignup()" class="text-brand-blue font-semibold hover:underline ml-1">
+          <button type="button" onclick="showSignup()" class="text-brand-blue font-semibold hover:underline ml-1">
             Create one
           </button>
         </div>
       </div>
 
       <!-- ════ SIGNUP PANE ══════════════════════════════════════════ -->
-      <div id="pane-signup" class="hidden">
+      <div id="pane-signup" class="{% if not show_signup %}hidden{% endif %}">
 
         <!-- Progress bar -->
         <div class="bg-white rounded-2xl shadow-lg p-6 mb-4">
@@ -191,268 +199,261 @@
           </div>
         </div>
 
-        <!-- Steps container -->
-        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <!-- Real form wraps all 3 steps -->
+        <form id="signup-form" method="post" action="{% url 'signup' %}" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
 
-          <!-- ── Step 1: Account ───────────────────────────────── -->
-          <div id="signup-step-1" class="step-pane active p-8">
-            <h3 class="text-xl font-bold text-gray-900 mb-1">Account Details</h3>
-            <p class="text-sm text-gray-500 mb-6">Set up your login credentials</p>
+          <!-- Steps container -->
+          <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
 
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Full Name *</label>
-                <input id="s-name" type="text" placeholder="Ram Sharma"
-                       class="auth-input" oninput="validateName(this)">
-                <p class="text-xs text-red-500 mt-1 hidden" id="err-name">Please enter your full name.</p>
-              </div>
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Email Address *</label>
-                <input id="s-email" type="email" placeholder="you@example.com"
-                       class="auth-input" oninput="validateEmail(this)">
-                <p class="text-xs mt-1 hidden" id="err-email">Invalid email format.</p>
-              </div>
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Username *</label>
-                <div class="relative">
-                  <input id="s-username" type="text" placeholder="ramsharma123"
-                         class="auth-input pr-24" oninput="checkUsername(this)">
-                  <span id="user-status" class="absolute right-3 top-2.5 text-xs font-medium"></span>
+            <!-- ── Step 1: Account ───────────────────────────────── -->
+            <div id="signup-step-1" class="step-pane active p-8">
+              <h3 class="text-xl font-bold text-gray-900 mb-1">Account Details</h3>
+              <p class="text-sm text-gray-500 mb-6">Set up your login credentials</p>
+
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Full Name *</label>
+                  <input id="s-name" name="full_name" type="text" placeholder="Ram Sharma"
+                         class="auth-input" oninput="validateName(this)">
+                  <p class="text-xs text-red-500 mt-1 hidden" id="err-name">Please enter your full name.</p>
                 </div>
-                <p class="text-xs text-gray-400 mt-1">3–20 chars, letters/numbers/underscore only.</p>
-              </div>
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Password *</label>
-                <div class="relative">
-                  <input id="s-pw" type="password" placeholder="••••••••"
-                         class="auth-input pr-10" oninput="checkStrength(this)">
-                  <button type="button" onclick="togglePw('s-pw',this)"
-                          class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                    </svg>
-                  </button>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Email Address *</label>
+                  <input id="s-email" name="email" type="email" placeholder="you@example.com"
+                         class="auth-input" oninput="validateEmail(this)">
+                  <p class="text-xs mt-1 hidden" id="err-email">Invalid email format.</p>
                 </div>
-                <!-- Strength bar -->
-                <div class="flex gap-1 mt-2">
-                  <div id="sb1" class="strength-bar flex-1 bg-gray-200" style="width:100%"></div>
-                  <div id="sb2" class="strength-bar flex-1 bg-gray-200"></div>
-                  <div id="sb3" class="strength-bar flex-1 bg-gray-200"></div>
-                  <div id="sb4" class="strength-bar flex-1 bg-gray-200"></div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Username *</label>
+                  <div class="relative">
+                    <input id="s-username" name="username" type="text" placeholder="ramsharma123"
+                           class="auth-input pr-24" oninput="checkUsername(this)">
+                    <span id="user-status" class="absolute right-3 top-2.5 text-xs font-medium"></span>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-1">3–20 chars, letters/numbers/underscore only.</p>
                 </div>
-                <p id="strength-label" class="text-xs mt-1 text-gray-400">Enter a password</p>
-                <!-- Requirements checklist -->
-                <ul class="mt-2 space-y-1 text-xs" id="pw-checklist">
-                  <li id="req-len"  class="flex items-center gap-1.5 text-gray-400"><span>○</span> At least 8 characters</li>
-                  <li id="req-upp"  class="flex items-center gap-1.5 text-gray-400"><span>○</span> One uppercase letter</li>
-                  <li id="req-num"  class="flex items-center gap-1.5 text-gray-400"><span>○</span> One number</li>
-                  <li id="req-spec" class="flex items-center gap-1.5 text-gray-400"><span>○</span> One special character</li>
-                </ul>
-              </div>
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Confirm Password *</label>
-                <div class="relative">
-                  <input id="s-pw2" type="password" placeholder="••••••••"
-                         class="auth-input pr-10" oninput="checkMatch(this)">
-                  <button type="button" onclick="togglePw('s-pw2',this)"
-                          class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                    </svg>
-                  </button>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Password *</label>
+                  <div class="relative">
+                    <input id="s-pw" name="password" type="password" placeholder="••••••••"
+                           class="auth-input pr-10" oninput="checkStrength(this)">
+                    <button type="button" onclick="togglePw('s-pw',this)"
+                            class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+                      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <!-- Strength bar -->
+                  <div class="flex gap-1 mt-2">
+                    <div id="sb1" class="strength-bar flex-1 bg-gray-200" style="width:100%"></div>
+                    <div id="sb2" class="strength-bar flex-1 bg-gray-200"></div>
+                    <div id="sb3" class="strength-bar flex-1 bg-gray-200"></div>
+                    <div id="sb4" class="strength-bar flex-1 bg-gray-200"></div>
+                  </div>
+                  <p id="strength-label" class="text-xs mt-1 text-gray-400">Enter a password</p>
+                  <!-- Requirements checklist -->
+                  <ul class="mt-2 space-y-1 text-xs" id="pw-checklist">
+                    <li id="req-len"  class="flex items-center gap-1.5 text-gray-400"><span>○</span> At least 8 characters</li>
+                    <li id="req-upp"  class="flex items-center gap-1.5 text-gray-400"><span>○</span> One uppercase letter</li>
+                    <li id="req-num"  class="flex items-center gap-1.5 text-gray-400"><span>○</span> One number</li>
+                    <li id="req-spec" class="flex items-center gap-1.5 text-gray-400"><span>○</span> One special character</li>
+                  </ul>
                 </div>
-                <p class="text-xs mt-1 hidden" id="err-match">Passwords do not match.</p>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Confirm Password *</label>
+                  <div class="relative">
+                    <input id="s-pw2" name="password2" type="password" placeholder="••••••••"
+                           class="auth-input pr-10" oninput="checkMatch(this)">
+                    <button type="button" onclick="togglePw('s-pw2',this)"
+                            class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+                      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <p class="text-xs mt-1 hidden" id="err-match">Passwords do not match.</p>
+                </div>
               </div>
+
+              <button id="s1-next" type="button" onclick="nextStep(1)"
+                      class="mt-6 w-full bg-brand-blue text-white py-2.5 rounded-lg font-semibold
+                             text-sm transition-colors hover:bg-blue-900 disabled:opacity-40 disabled:cursor-not-allowed">
+                Continue →
+              </button>
+              <p class="text-center text-sm text-gray-500 mt-4">
+                Already have an account?
+                <button type="button" onclick="showLogin()" class="text-brand-blue font-semibold hover:underline ml-1">Sign in</button>
+              </p>
             </div>
 
-            <button id="s1-next" onclick="nextStep(1)"
-                    class="mt-6 w-full bg-brand-blue text-white py-2.5 rounded-lg font-semibold
-                           text-sm transition-colors hover:bg-blue-900 disabled:opacity-40 disabled:cursor-not-allowed">
-              Continue →
-            </button>
-            <p class="text-center text-sm text-gray-500 mt-4">
-              Already have an account?
-              <button onclick="showLogin()" class="text-brand-blue font-semibold hover:underline ml-1">Sign in</button>
-            </p>
-          </div>
+            <!-- ── Step 2: Personal Info ─────────────────────────── -->
+            <div id="signup-step-2" class="step-pane p-8">
+              <h3 class="text-xl font-bold text-gray-900 mb-1">Personal Information</h3>
+              <p class="text-sm text-gray-500 mb-6">Help us personalise your experience</p>
 
-          <!-- ── Step 2: Personal Info ─────────────────────────── -->
-          <div id="signup-step-2" class="step-pane p-8">
-            <h3 class="text-xl font-bold text-gray-900 mb-1">Personal Information</h3>
-            <p class="text-sm text-gray-500 mb-6">Help us personalise your experience</p>
+              <!-- Profile picture — optional -->
+              <div class="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
+                <div class="relative flex-shrink-0">
+                  <input type="file" id="s-avatar-input" name="profile_picture"
+                         accept="image/png, image/jpeg, image/webp" class="hidden"
+                         onchange="handleSignupAvatarChange(event)">
 
-            <!-- Profile picture — optional, can be added later from Profile settings -->
-            <div class="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
-              <div class="relative flex-shrink-0">
-                <input type="file" id="s-avatar-input" accept="image/png, image/jpeg, image/webp" class="hidden"
-                       onchange="handleSignupAvatarChange(event)">
+                  <button type="button" id="s-avatar-btn" class="avatar-btn"
+                          onclick="document.getElementById('s-avatar-input').click()"
+                          title="Add profile picture" aria-label="Add profile picture">
 
-                <button type="button" id="s-avatar-btn" class="avatar-btn"
-                        onclick="document.getElementById('s-avatar-input').click()"
-                        title="Add profile picture" aria-label="Add profile picture">
+                    <span class="avatar-img" id="s-avatar-img-wrap">
+                      <img id="s-avatar-img" src="" alt="" class="hidden">
+                    </span>
 
-                  <span class="avatar-img" id="s-avatar-img-wrap">
-                    <img id="s-avatar-img" src="" alt="" class="hidden">
-                  </span>
+                    <span class="avatar-placeholder text-gray-400" id="s-avatar-placeholder">
+                      <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8c0 2.208-1.79 4-3.998 4-2.208 0-3.998-1.792-3.998-4s1.79-4 3.998-4c2.208 0 3.998 1.792 3.998 4z"/>
+                      </svg>
+                    </span>
 
-                  <span class="avatar-placeholder text-gray-400" id="s-avatar-placeholder">
-                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8c0 2.208-1.79 4-3.998 4-2.208 0-3.998-1.792-3.998-4s1.79-4 3.998-4c2.208 0 3.998 1.792 3.998 4z"/>
-                    </svg>
-                  </span>
+                    <span class="avatar-overlay" id="s-avatar-overlay">
+                      <svg id="s-avatar-camera-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      </svg>
+                      <span>Add Photo</span>
+                    </span>
+                  </button>
 
-                  <span class="avatar-overlay" id="s-avatar-overlay">
-                    <svg id="s-avatar-camera-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <span class="avatar-badge">
+                    <svg class="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
                       <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
                     </svg>
-                    <span>Add Photo</span>
                   </span>
-                </button>
-
-                <span class="avatar-badge">
-                  <svg class="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-                  </svg>
-                </span>
-              </div>
-
-              <div class="min-w-0">
-                <p class="text-sm font-semibold text-gray-700">
-                  Profile Picture <span class="text-gray-400 font-normal">(optional)</span>
-                </p>
-                <p class="text-xs text-gray-500 mt-0.5">
-                  Add a photo now, or skip it — you can always add one later from your profile settings.
-                </p>
-                <button type="button" id="s-avatar-remove" onclick="removeSignupAvatar()"
-                        class="hidden text-xs font-semibold text-red-500 hover:underline mt-1.5">
-                  Remove photo
-                </button>
-              </div>
-            </div>
-
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Phone Number *</label>
-                <input id="s-phone" type="tel" placeholder="+977 9800000000"
-                       class="auth-input" oninput="formatPhone(this)" maxlength="14">
-                <p class="text-xs text-red-500 mt-1 hidden" id="err-phone">Enter a valid phone number.</p>
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-1">Date of Birth *</label>
-                  <input id="s-dob" type="date" class="auth-input" max="{{ today }}">
                 </div>
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-1">Gender</label>
-                  <select id="s-gender" class="auth-input bg-white">
-                    <option value="">Select…</option>
-                    <option>Male</option><option>Female</option>
-                    <option>Other</option><option>Prefer not to say</option>
-                  </select>
+
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-gray-700">
+                    Profile Picture <span class="text-gray-400 font-normal">(optional)</span>
+                  </p>
+                  <p class="text-xs text-gray-500 mt-0.5">
+                    Add a photo now, or skip it — you can always add one later from your profile settings.
+                  </p>
+                  <button type="button" id="s-avatar-remove" onclick="removeSignupAvatar()"
+                          class="hidden text-xs font-semibold text-red-500 hover:underline mt-1.5">
+                    Remove photo
+                  </button>
                 </div>
               </div>
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Address *</label>
-                <input id="s-address" type="text" placeholder="Ward No. 5, Thamel"
-                       class="auth-input">
+
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Phone Number *</label>
+                  <input id="s-phone" name="phone_number" type="tel" placeholder="+977 9800000000"
+                         class="auth-input" oninput="formatPhone(this)" maxlength="14">
+                  <p class="text-xs text-red-500 mt-1 hidden" id="err-phone">Enter a valid phone number.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Date of Birth *</label>
+                    <input id="s-dob" name="dob" type="date" class="auth-input" max="{{ today }}">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Gender</label>
+                    <select id="s-gender" name="gender" class="auth-input bg-white">
+                      <option value="">Select…</option>
+                      <option value="Male">Male</option><option value="Female">Female</option>
+                      <option value="Other">Other</option><option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Address *</label>
+                  <input id="s-address" name="address" type="text" placeholder="Ward No. 5, Thamel"
+                         class="auth-input">
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Municipality / City *</label>
+                  <input id="s-city" name="municipality" type="text" placeholder="Kathmandu Metropolitan City"
+                         class="auth-input">
+                </div>
               </div>
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Municipality / City *</label>
-                <input id="s-city" type="text" placeholder="Kathmandu Metropolitan City"
-                       class="auth-input">
+
+              <div class="flex gap-3 mt-6">
+                <button type="button" onclick="prevStep(2)"
+                        class="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg
+                               text-sm font-semibold hover:bg-gray-50 transition-colors">
+                  ← Back
+                </button>
+                <button type="button" onclick="nextStep(2)"
+                        class="flex-1 bg-brand-blue text-white py-2.5 rounded-lg
+                               font-semibold text-sm hover:bg-blue-900 transition-colors">
+                  Continue →
+                </button>
               </div>
             </div>
 
-            <div class="flex gap-3 mt-6">
-              <button onclick="prevStep(2)"
-                      class="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg
-                             text-sm font-semibold hover:bg-gray-50 transition-colors">
-                ← Back
-              </button>
-              <button onclick="nextStep(2)"
-                      class="flex-1 bg-brand-blue text-white py-2.5 rounded-lg
-                             font-semibold text-sm hover:bg-blue-900 transition-colors">
-                Continue →
-              </button>
-            </div>
-          </div>
+            <!-- ── Step 3: Review ────────────────────────────────── -->
+            <div id="signup-step-3" class="step-pane p-8">
+              <h3 class="text-xl font-bold text-gray-900 mb-1">Review &amp; Confirm</h3>
+              <p class="text-sm text-gray-500 mb-5">Please check your details before creating your account</p>
 
-          <!-- ── Step 3: Review ────────────────────────────────── -->
-          <div id="signup-step-3" class="step-pane p-8">
-            <h3 class="text-xl font-bold text-gray-900 mb-1">Review &amp; Confirm</h3>
-            <p class="text-sm text-gray-500 mb-5">Please check your details before creating your account</p>
+              <div class="review-section">
+                <div class="flex items-center justify-between mb-3">
+                  <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide">Account</h4>
+                  <button type="button" onclick="gotoStep(1)" class="text-xs text-brand-blue hover:underline font-medium">Edit</button>
+                </div>
+                <div class="space-y-1.5 text-sm">
+                  <p><span class="text-gray-500">Name:</span> <span id="rv-name" class="font-medium text-gray-900 ml-1">—</span></p>
+                  <p><span class="text-gray-500">Email:</span> <span id="rv-email" class="font-medium text-gray-900 ml-1">—</span></p>
+                  <p><span class="text-gray-500">Username:</span> <span id="rv-user" class="font-medium text-gray-900 ml-1">—</span></p>
+                </div>
+              </div>
+              <div class="review-section">
+                <div class="flex items-center justify-between mb-3">
+                  <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide">Personal Information</h4>
+                  <button type="button" onclick="gotoStep(2)" class="text-xs text-brand-blue hover:underline font-medium">Edit</button>
+                </div>
+                <div class="flex items-center gap-3 mb-3">
+                  <span class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center flex-shrink-0 border border-gray-200">
+                    <img id="rv-avatar-img" src="" alt="" class="hidden w-full h-full object-cover">
+                    <svg id="rv-avatar-placeholder" class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8c0 2.208-1.79 4-3.998 4-2.208 0-3.998-1.792-3.998-4s1.79-4 3.998-4c2.208 0 3.998 1.792 3.998 4z"/>
+                    </svg>
+                  </span>
+                  <p class="text-xs text-gray-500">Photo: <span id="rv-photo" class="font-medium text-gray-800 ml-1">Not added</span></p>
+                </div>
+                <div class="space-y-1.5 text-sm">
+                  <p><span class="text-gray-500">Phone:</span> <span id="rv-phone" class="font-medium text-gray-900 ml-1">—</span></p>
+                  <p><span class="text-gray-500">DOB:</span> <span id="rv-dob" class="font-medium text-gray-900 ml-1">—</span></p>
+                  <p><span class="text-gray-500">Gender:</span> <span id="rv-gender" class="font-medium text-gray-900 ml-1">—</span></p>
+                  <p><span class="text-gray-500">City:</span> <span id="rv-city" class="font-medium text-gray-900 ml-1">—</span></p>
+                </div>
+              </div>
 
-            <!-- Review sections populated by JS -->
-            <div class="review-section">
-              <div class="flex items-center justify-between mb-3">
-                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide">Account</h4>
-                <button onclick="gotoStep(1)" class="text-xs text-brand-blue hover:underline font-medium">Edit</button>
-              </div>
-              <div class="space-y-1.5 text-sm">
-                <p><span class="text-gray-500">Name:</span> <span id="rv-name" class="font-medium text-gray-900 ml-1">—</span></p>
-                <p><span class="text-gray-500">Email:</span> <span id="rv-email" class="font-medium text-gray-900 ml-1">—</span></p>
-                <p><span class="text-gray-500">Username:</span> <span id="rv-user" class="font-medium text-gray-900 ml-1">—</span></p>
-              </div>
-            </div>
-            <div class="review-section">
-              <div class="flex items-center justify-between mb-3">
-                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide">Personal Information</h4>
-                <button onclick="gotoStep(2)" class="text-xs text-brand-blue hover:underline font-medium">Edit</button>
-              </div>
-              <div class="flex items-center gap-3 mb-3">
-                <span class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center flex-shrink-0 border border-gray-200">
-                  <img id="rv-avatar-img" src="" alt="" class="hidden w-full h-full object-cover">
-                  <svg id="rv-avatar-placeholder" class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8c0 2.208-1.79 4-3.998 4-2.208 0-3.998-1.792-3.998-4s1.79-4 3.998-4c2.208 0 3.998 1.792 3.998 4z"/>
-                  </svg>
-                </span>
-                <p class="text-xs text-gray-500">Photo: <span id="rv-photo" class="font-medium text-gray-800 ml-1">Not added</span></p>
-              </div>
-              <div class="space-y-1.5 text-sm">
-                <p><span class="text-gray-500">Phone:</span> <span id="rv-phone" class="font-medium text-gray-900 ml-1">—</span></p>
-                <p><span class="text-gray-500">DOB:</span> <span id="rv-dob" class="font-medium text-gray-900 ml-1">—</span></p>
-                <p><span class="text-gray-500">Gender:</span> <span id="rv-gender" class="font-medium text-gray-900 ml-1">—</span></p>
-                <p><span class="text-gray-500">City:</span> <span id="rv-city" class="font-medium text-gray-900 ml-1">—</span></p>
+              <label class="flex items-center gap-2 text-xs text-gray-600 mb-4">
+                <input type="checkbox" id="terms-cb" class="accent-brand-blue rounded">
+                I agree to the Terms &amp; Conditions and Privacy Policy.
+              </label>
+
+              <div class="flex gap-3 mt-1">
+                <button type="button" onclick="prevStep(3)"
+                        class="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg
+                               text-sm font-semibold hover:bg-gray-50 transition-colors">
+                  ← Back
+                </button>
+                <button id="create-btn" type="submit"
+                        class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg
+                               font-semibold text-sm transition-colors">
+                  Create Account
+                </button>
               </div>
             </div>
 
-            <div class="flex gap-3 mt-5">
-              <button onclick="prevStep(3)"
-                      class="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg
-                             text-sm font-semibold hover:bg-gray-50 transition-colors">
-                ← Back
-              </button>
-              <button id="create-btn" onclick="createAccount()"
-                      class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg
-                             font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                Create Account
-              </button>
-            </div>
-          </div>
+          </div><!-- /steps container -->
+        </form>
 
-          <!-- ── Success screen ────────────────────────────────── -->
-          <div id="signup-step-success" class="step-pane p-8 text-center">
-            <div class="success-icon inline-flex items-center justify-center w-20 h-20 rounded-full
-                        bg-green-100 mb-6">
-              <svg class="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24"
-                   stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-              </svg>
-            </div>
-            <h3 class="text-2xl font-bold text-gray-900">Account Created!</h3>
-            <p class="text-gray-600 mt-2" id="success-msg">Welcome! Your account has been created successfully.</p>
-            <p class="text-sm text-gray-500 mt-1">You can now sign in and start using the platform.</p>
-            <button onclick="showLogin()"
-                    class="mt-8 w-full bg-brand-blue text-white py-2.5 rounded-lg font-semibold
-                           text-sm hover:bg-blue-900 transition-colors">
-              Proceed to Login
-            </button>
-          </div>
-        </div><!-- /steps container -->
       </div><!-- /pane-signup -->
 
     </div><!-- /max-w-md -->
@@ -484,20 +485,18 @@ var STEP_PCT = {1:33, 2:66, 3:100};
 
 function gotoStep(n) {
   document.querySelectorAll('.step-pane').forEach(function(p){ p.classList.remove('active'); });
-  var target = document.getElementById('signup-step-' + (n === 'success' ? 'success' : n));
+  var target = document.getElementById('signup-step-' + n);
   if (target) target.classList.add('active');
-  if (typeof n === 'number') {
-    currentStep = n;
-    var pct = STEP_PCT[n] || 100;
-    document.getElementById('prog-bar').style.width = pct + '%';
-    document.getElementById('prog-pct').textContent = pct + '%';
-    for (var i=1;i<=3;i++) {
-      var dot = document.getElementById('step-dot-'+i);
-      if (!dot) continue;
-      if (i < n)       dot.className = dot.className.replace(/bg-\S+|text-\S+/g,'') + ' bg-green-500 text-white';
-      else if (i === n) dot.className = dot.className.replace(/bg-\S+|text-\S+/g,'') + ' bg-brand-blue text-white';
-      else              dot.className = dot.className.replace(/bg-\S+|text-\S+/g,'') + ' bg-gray-200 text-gray-500';
-    }
+  currentStep = n;
+  var pct = STEP_PCT[n] || 100;
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('prog-pct').textContent = pct + '%';
+  for (var i=1;i<=3;i++) {
+    var dot = document.getElementById('step-dot-'+i);
+    if (!dot) continue;
+    if (i < n)       dot.className = dot.className.replace(/bg-\S+|text-\S+/g,'') + ' bg-green-500 text-white';
+    else if (i === n) dot.className = dot.className.replace(/bg-\S+|text-\S+/g,'') + ' bg-brand-blue text-white';
+    else              dot.className = dot.className.replace(/bg-\S+|text-\S+/g,'') + ' bg-gray-200 text-gray-500';
   }
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -541,9 +540,6 @@ function validateStep2() {
   formData.gender  = document.getElementById('s-gender').value;
   formData.address = address;
   formData.city    = city;
-  // Profile picture is optional — formData.avatarFile (if any) was already
-  // set by handleSignupAvatarChange(), so we don't touch it here and never
-  // block continuing just because a photo wasn't added.
   return true;
 }
 
@@ -561,22 +557,13 @@ function populateReview() {
   rvPhoto.textContent = formData.avatarFile ? 'Added' : 'Not added (can add later)';
 }
 
-// ── Create account ────────────────────────────────────────
-function createAccount() {
+// ── Submit guard (terms checkbox) ─────────────────────────
+document.getElementById('signup-form').addEventListener('submit', function (e) {
   if (!document.getElementById('terms-cb').checked) {
-    alert('Please accept the Terms & Conditions to continue.'); return;
+    e.preventDefault();
+    alert('Please accept the Terms & Conditions to continue.');
   }
-  // TODO: POST /api/auth/register/ with formData.
-  // If formData.avatarFile is set, send as multipart/form-data, e.g.:
-  //   var fd = new FormData();
-  //   Object.keys(formData).forEach(k => { if (k !== 'avatarFile') fd.append(k, formData[k]); });
-  //   if (formData.avatarFile) fd.append('avatar', formData.avatarFile);
-  //   fetch('/api/auth/register/', { method:'POST', body: fd, headers: {'X-CSRFToken': getCsrfToken()} })
-  // On success: show success pane; on error: show inline error
-  document.getElementById('success-msg').textContent =
-    'Welcome, ' + formData.name + '! Your account has been created successfully.';
-  gotoStep('success');
-}
+});
 
 // ── Field helpers ─────────────────────────────────────────
 function showErr(id, show, msg) {
@@ -591,7 +578,7 @@ function togglePw(id, btn) {
   var inp = document.getElementById(id);
   var isText = inp.type === 'text';
   inp.type = isText ? 'password' : 'text';
-  btn.querySelector('svg path:last-child') &&
+  btn.querySelector('svg') &&
     (btn.querySelector('svg').innerHTML = isText
       ? '<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>'
       : '<path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>');
@@ -618,14 +605,18 @@ function checkUsername(inp) {
   if(st){st.textContent='Checking…';st.className='absolute right-3 top-2.5 text-xs font-medium text-gray-400';}
   clearTimeout(userTimer);
   userTimer = setTimeout(function(){
-    // TODO: GET /api/auth/check-username/?u=VALUE
-    var taken = ['admin','user','test','nepal'].includes(v.toLowerCase());
-    inp.classList.toggle('valid',!taken); inp.classList.toggle('invalid',taken);
-    if(st){
-      st.textContent = taken ? '✗ Taken' : '✓ Available';
-      st.className = 'absolute right-3 top-2.5 text-xs font-medium '+(taken?'text-red-500':'text-green-600');
-    }
-  }, 600);
+    fetch('/api/check-username/?u=' + encodeURIComponent(v))
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        inp.classList.toggle('valid', data.available);
+        inp.classList.toggle('invalid', !data.available);
+        if (st) {
+          st.textContent = data.available ? '✓ Available' : '✗ Taken';
+          st.className = 'absolute right-3 top-2.5 text-xs font-medium ' + (data.available ? 'text-green-600' : 'text-red-500');
+        }
+      })
+      .catch(function(){ if (st) st.textContent = ''; });
+  }, 500);
 }
 
 function checkStrength(inp) {
@@ -667,11 +658,7 @@ function formatPhone(inp) {
 }
 
 /* ── Profile picture upload (step 2) ─────────────────────────
-   Entirely optional: the "Continue" button in step 2 never checks
-   for a photo, so people can freely skip this and add one later
-   from their profile page. If they do pick a file, we validate it,
-   preview it inline, mirror it into the review step thumbnail, and
-   stash the raw File on formData so createAccount() can send it. */
+   Optional: never blocks continuing past step 2. */
 function handleSignupAvatarChange(event) {
   var file = event.target.files && event.target.files[0];
   if (!file) return;
@@ -703,7 +690,6 @@ function handleSignupAvatarChange(event) {
     img.classList.remove('hidden');
     placeholder.style.display = 'none';
 
-    // Mirror into the review-step thumbnail too
     var rvImg = document.getElementById('rv-avatar-img');
     var rvPlaceholder = document.getElementById('rv-avatar-placeholder');
     if (rvImg) { rvImg.src = e.target.result; rvImg.classList.remove('hidden'); }
@@ -740,5 +726,9 @@ function removeSignupAvatar() {
   if (rvImg) { rvImg.src = ''; rvImg.classList.add('hidden'); }
   if (rvPlaceholder) rvPlaceholder.style.display = '';
 }
+
+{% if show_signup %}
+document.addEventListener('DOMContentLoaded', function () { showSignup(); });
+{% endif %}
 </script>
 {% endblock %}
