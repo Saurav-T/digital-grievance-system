@@ -125,16 +125,7 @@
         </div>
         <div class="space-y-2">
           <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" class="accent-brand-blue filter-check" data-filter="ministry of education"> Ministry of Education
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" class="accent-brand-blue filter-check" data-filter="kathmandu"> Kathmandu
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" class="accent-brand-blue filter-check" data-filter="deadline-month"> Deadline: This Month
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" class="accent-brand-blue filter-check" data-filter="computer operator"> Computer Operator
           </label>
         </div>
       </div>
@@ -161,23 +152,8 @@
 <!-- Toast notification -->
 <div id="bm-toast"></div>
 
-<!-- Job Data -->
-<script id="job-data" type="application/json">
-[
-  { "id":1,  "title": "Computer Operator",    "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "{% url 'job_detail' 1 %}",  "email": "hr@moe.gov.np" },
-  { "id":2,  "title": "Data Entry Officer",   "org": "Ministry of Finance",   "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "{% url 'job_detail' 2 %}",  "email": "hr@mof.gov.np" },
-  { "id":3,  "title": "Computer Operator",    "org": "Ministry of Education", "location": "Pokhara, Nepal",    "deadline": "2026-07-30", "url": "{% url 'job_detail' 3 %}",  "email": "hr@moe.gov.np" },
-  { "id":4,  "title": "IT Support Officer",   "org": "Ministry of Health",    "location": "Lalitpur, Nepal",   "deadline": "2026-08-15", "url": "{% url 'job_detail' 4 %}",  "email": "hr@moh.gov.np" },
-  { "id":5,  "title": "Network Engineer",     "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "{% url 'job_detail' 5 %}",  "email": "hr@moe.gov.np" },
-  { "id":6,  "title": "System Administrator", "org": "Ministry of Home",      "location": "Bhaktapur, Nepal",  "deadline": "2026-08-01", "url": "{% url 'job_detail' 6 %}",  "email": "hr@moha.gov.np" },
-  { "id":7,  "title": "Computer Operator",    "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "{% url 'job_detail' 7 %}",  "email": "hr@moe.gov.np" },
-  { "id":8,  "title": "Web Developer",        "org": "Ministry of Finance",   "location": "Kathmandu, Nepal",  "deadline": "2026-08-20", "url": "{% url 'job_detail' 8 %}",  "email": "hr@mof.gov.np" },
-  { "id":9,  "title": "Database Admin",       "org": "Ministry of Health",    "location": "Pokhara, Nepal",    "deadline": "2026-07-30", "url": "{% url 'job_detail' 9 %}",  "email": "hr@moh.gov.np" },
-  { "id":10, "title": "Computer Operator",    "org": "Ministry of Education", "location": "Kathmandu, Nepal",  "deadline": "2026-07-30", "url": "{% url 'job_detail' 10 %}", "email": "hr@moe.gov.np" },
-  { "id":11, "title": "Software Engineer",    "org": "Ministry of Science",   "location": "Lalitpur, Nepal",   "deadline": "2026-09-01", "url": "{% url 'job_detail' 11 %}", "email": "hr@moste.gov.np" },
-  { "id":12, "title": "IT Officer",           "org": "Ministry of Home",      "location": "Kathmandu, Nepal",  "deadline": "2026-07-28", "url": "{% url 'job_detail' 12 %}", "email": "hr@moha.gov.np" }
-]
-</script>
+<!-- Job Data (rendered by the server from the real JobListing table) -->
+<script id="job-data" type="application/json">{{ jobs_json|safe }}</script>
 {% endblock %}
 
 {% block extra_js %}
@@ -186,7 +162,8 @@
   const PER_PAGE = 6;
   const FALLBACK = "{% static 'client/img/emblem.png' %}";
   const NOW = new Date();
-  const STORAGE_KEY = 'dgnbs_bookmarks';
+  const IS_AUTH = {{ request.user.is_authenticated|yesno:"true,false" }};
+  const LOGIN_URL = '{% url "login" %}';
 
   let allJobs     = [];
   let filtered    = [];
@@ -204,21 +181,9 @@
   const filterChecks   = document.querySelectorAll('.filter-check');
   const toast          = document.getElementById('bm-toast');
 
-  /* ── Bookmark persistence ── */
-  function getBookmarks() {
-    try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); }
-    catch { return new Set(); }
-  }
-  function saveBookmarks(set) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...set])); } catch {}
-  }
-  function toggleBookmark(id, title) {
-    const bm = getBookmarks();
-    const saved = bm.has(id);
-    if (saved) { bm.delete(id); showToast(`Removed "${title}" from bookmarks`); }
-    else        { bm.add(id);   showToast(`Bookmarked "${title}"`); }
-    saveBookmarks(bm);
-    return !saved;
+  function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
   }
 
   /* ── Toast ── */
@@ -228,6 +193,28 @@
     toast.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  /* ── Save toggle (server-backed) ── */
+  function toggleSave(id, title, btn) {
+    if (!IS_AUTH) { window.location.href = LOGIN_URL; return; }
+    fetch('/api/jobs/' + id + '/save/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    })
+      .then(r => r.json())
+      .then(data => {
+        const nowSaved = !!data.saved;
+        btn.classList.toggle('saved', nowSaved);
+        const svg = btn.querySelector('svg');
+        svg.setAttribute('stroke', nowSaved ? '#1e3a8a' : '#9ca3af');
+        svg.setAttribute('fill',   nowSaved ? '#1e3a8a' : 'none');
+        btn.setAttribute('aria-label', nowSaved ? 'Remove bookmark' : 'Bookmark this job');
+        showToast(nowSaved ? `Bookmarked "${title}"` : `Removed "${title}" from bookmarks`);
+        const job = allJobs.find(j => j.id === id);
+        if (job) job.is_saved = nowSaved;
+      })
+      .catch(() => alert('Could not update bookmark. Please try again.'));
   }
 
   /* ── Helpers ── */
@@ -256,10 +243,7 @@
     filtered = allJobs.filter(job => {
       if (q && !job.title.toLowerCase().includes(q) && !job.org.toLowerCase().includes(q)) return false;
       for (const f of active) {
-        if (f === 'deadline-month') { if (!isThisMonth(job.deadline)) return false; }
-        else if (!job.title.toLowerCase().includes(f) &&
-                 !job.org.toLowerCase().includes(f) &&
-                 !job.location.toLowerCase().includes(f)) return false;
+        if (f === 'deadline-month' && !isThisMonth(job.deadline)) return false;
       }
       return true;
     });
@@ -269,7 +253,6 @@
 
   /* ── Render cards ── */
   function render() {
-    const bm         = getBookmarks();
     const total      = filtered.length;
     const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
     currentPage      = Math.min(currentPage, totalPages);
@@ -281,10 +264,10 @@
     } else {
       emptyState.classList.add('hidden');
       grid.innerHTML = pageJobs.map(job => {
-        const isSaved = bm.has(job.id);
+        const isSaved = !!job.is_saved;
         const soon    = isDeadlineSoon(job.deadline);
         return `
-        <div class="job-card relative bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-4 cursor-pointer"
+        <div class="job-card relative bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3 flex items-center gap-4 cursor-pointer"
              data-job-id="${job.id}" data-job-url="${job.url}">
 
           <!-- Bookmark button -->
@@ -303,7 +286,7 @@
 
           <!-- Emblem -->
           <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20">
-            <img src="${job.logo || FALLBACK}"
+            <img src="${FALLBACK}"
                  alt="${job.org}"
                  class="w-full h-full object-contain"
                  onerror="this.onerror=null;this.src='${FALLBACK}';">
@@ -339,12 +322,7 @@
           e.stopPropagation();
           const id    = parseInt(btn.dataset.id, 10);
           const title = btn.dataset.title;
-          const nowSaved = toggleBookmark(id, title);
-          btn.classList.toggle('saved', nowSaved);
-          const svg = btn.querySelector('svg');
-          svg.setAttribute('stroke', nowSaved ? '#1e3a8a' : '#9ca3af');
-          svg.setAttribute('fill',   nowSaved ? '#1e3a8a' : 'none');
-          btn.setAttribute('aria-label', nowSaved ? 'Remove bookmark' : 'Bookmark this job');
+          toggleSave(id, title, btn);
         });
       });
     }
