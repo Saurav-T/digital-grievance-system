@@ -65,13 +65,14 @@
         <button id="detail-bookmark-btn"
                 data-job-id="{{ job.id }}"
                 data-job-title="{{ job.title|escape }}"
-                aria-label="Bookmark this job"
-                title="Save job"
+                aria-label="{% if job.is_saved %}Remove bookmark{% else %}Bookmark this job{% endif %}"
+                title="{% if job.is_saved %}Remove bookmark{% else %}Save job{% endif %}"
                 class="flex-shrink-0 mt-0.5 p-2 rounded-lg border border-gray-200 bg-white
                        hover:bg-blue-50 hover:border-brand-blue text-gray-400
-                       hover:text-brand-blue transition-all duration-200">
+                       hover:text-brand-blue transition-all duration-200 {% if job.is_saved %}saved{% endif %}">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24"
-               stroke="currentColor" stroke-width="2">
+               stroke="currentColor" stroke-width="2"
+               fill="{% if job.is_saved %}#1e3a8a{% else %}none{% endif %}">
             <path stroke-linecap="round" stroke-linejoin="round"
                   d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
           </svg>
@@ -203,7 +204,6 @@
 <div id="media-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
   <div class="fixed inset-0 bg-black/50" onclick="closeMediaModal()"></div>
   <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden">
-    <!-- Modal content same as before -->
     <div class="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
       <div>
         <h3 class="font-semibold text-gray-900">Attached Media</h3>
@@ -219,7 +219,6 @@
       <ul class="space-y-2">
         {% for media in job.attached_media %}
         <li class="flex items-center gap-4 p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors group">
-          <!-- file icon logic same as before -->
           {% if media.type == 'pdf' %}
           <div class="w-10 h-10 rounded-lg file-badge-pdf flex items-center justify-center flex-shrink-0">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -290,9 +289,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMediaMo
 
 /* Gmail composer */
 (function buildGmailLink() {
-  const toEmail  = '{{ job.contact_email|default:"hr@moe.gov.np" }}';
-  const position = '{{ job.title|default:"Computer Operator" }}';
-  const org      = '{{ job.department|default:"Ministry of Education" }}';
+  const toEmail  = '{{ job.contact_email|default:"hr@example.gov.np" }}';
+  const position = '{{ job.title|default:"Position" }}';
+  const org      = '{{ job.department|default:"" }}';
 
   const subject = encodeURIComponent(`Application for ${position} – ${org}`);
   const body = encodeURIComponent(
@@ -307,19 +306,18 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMediaMo
   document.getElementById('send-email-btn').href = gmailUrl;
 })();
 
-/* Bookmark functionality */
+/* Bookmark functionality (server-backed) */
 (function initBookmark() {
-  const STORAGE_KEY = 'dgnbs_bookmarks';
+  const IS_AUTH = {{ request.user.is_authenticated|yesno:"true,false" }};
+  const LOGIN_URL = '{% url "login" %}';
   const btn   = document.getElementById('detail-bookmark-btn');
   const jobId = parseInt(btn.dataset.jobId, 10);
   const title = btn.dataset.jobTitle;
   const toast = document.getElementById('bm-toast');
 
-  function getBookmarks() {
-    try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); } catch { return new Set(); }
-  }
-  function saveBookmarks(set) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...set])); } catch {}
+  function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
   }
 
   let toastTimer;
@@ -330,22 +328,23 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMediaMo
     toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
   }
 
-  function syncBtn() {
-    const saved = getBookmarks().has(jobId);
-    btn.classList.toggle('saved', saved);
-    btn.title = saved ? 'Remove bookmark' : 'Save job';
-    btn.setAttribute('aria-label', saved ? 'Remove bookmark' : 'Bookmark this job');
-  }
-
-  syncBtn();
-
   btn.addEventListener('click', () => {
-    const bm = getBookmarks();
-    const saved = bm.has(jobId);
-    if (saved) { bm.delete(jobId); showToast(`Removed "${title}" from bookmarks`); }
-    else       { bm.add(jobId);   showToast(`Bookmarked "${title}"`); }
-    saveBookmarks(bm);
-    syncBtn();
+    if (!IS_AUTH) { window.location.href = LOGIN_URL; return; }
+    fetch('/api/jobs/' + jobId + '/save/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    })
+      .then(r => r.json())
+      .then(data => {
+        const saved = !!data.saved;
+        btn.classList.toggle('saved', saved);
+        const svg = btn.querySelector('svg');
+        svg.setAttribute('fill', saved ? '#1e3a8a' : 'none');
+        btn.title = saved ? 'Remove bookmark' : 'Save job';
+        btn.setAttribute('aria-label', saved ? 'Remove bookmark' : 'Bookmark this job');
+        showToast(saved ? `Bookmarked "${title}"` : `Removed "${title}" from bookmarks`);
+      })
+      .catch(() => alert('Could not update bookmark. Please try again.'));
   });
 })();
 </script>
