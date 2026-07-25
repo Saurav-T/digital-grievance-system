@@ -1,23 +1,40 @@
-{# Hero carousel: 4 placeholder slides. Replace bg-* placeholder divs with <img> tags once real assets exist. #}
+{# Hero carousel: shows real uploaded carousel images when at least one exists (is_active=True). #}
+{# Falls back to the 4 gradient placeholder slides only when carousel_images is empty. #}
 <section class="relative">
     <div id="hero-carousel" class="relative w-full h-48 sm:h-64 md:h-80 lg:h-96 overflow-hidden bg-gray-200">
 
         <div id="hero-track" class="flex h-full transition-transform duration-700 ease-in-out">
-            <div class="hero-slide w-full h-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-blue-200 to-blue-400">
-                <span class="text-white/80 font-semibold text-sm sm:text-base">Slide 1 placeholder</span>
-            </div>
-            <div class="hero-slide w-full h-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-indigo-200 to-indigo-400">
-                <span class="text-white/80 font-semibold text-sm sm:text-base">Slide 2 placeholder</span>
-            </div>
-            <div class="hero-slide w-full h-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-sky-200 to-sky-400">
-                <span class="text-white/80 font-semibold text-sm sm:text-base">Slide 3 placeholder</span>
-            </div>
-            <div class="hero-slide w-full h-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-cyan-200 to-cyan-400">
-                <span class="text-white/80 font-semibold text-sm sm:text-base">Slide 4 placeholder</span>
-            </div>
+            {% if carousel_images %}
+                {% for img in carousel_images %}
+                <div class="hero-slide relative w-full h-full flex-shrink-0">
+                    <img src="{{ img.image.url }}"
+                         alt="{{ img.caption|default:'Notice board carousel image' }}"
+                         class="w-full h-full object-cover">
+                    {% if img.caption %}
+                    <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent px-4 py-3">
+                        <p class="text-white text-xs sm:text-sm font-semibold drop-shadow">{{ img.caption }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="hero-slide w-full h-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-blue-200 to-blue-400">
+                    <span class="text-white/80 font-semibold text-sm sm:text-base">Slide 1 placeholder</span>
+                </div>
+                <div class="hero-slide w-full h-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-indigo-200 to-indigo-400">
+                    <span class="text-white/80 font-semibold text-sm sm:text-base">Slide 2 placeholder</span>
+                </div>
+                <div class="hero-slide w-full h-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-sky-200 to-sky-400">
+                    <span class="text-white/80 font-semibold text-sm sm:text-base">Slide 3 placeholder</span>
+                </div>
+                <div class="hero-slide w-full h-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-cyan-200 to-cyan-400">
+                    <span class="text-white/80 font-semibold text-sm sm:text-base">Slide 4 placeholder</span>
+                </div>
+            {% endif %}
         </div>
 
-        <!-- Prev / Next arrows -->
+        {% if not carousel_images or carousel_images|length > 1 %}
+        <!-- Prev / Next arrows (hidden automatically when there's only one real image) -->
         <button id="hero-prev" type="button" aria-label="Previous slide"
                 class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white rounded-full p-2 shadow">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -31,12 +48,68 @@
             </svg>
         </button>
 
-        <!-- Dots -->
+        <!-- Dots — one per real slide, or 4 for the placeholder set -->
         <div id="hero-dots" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
-            <button class="hero-dot h-2.5 w-2.5 rounded-full bg-white/60" data-index="0" aria-label="Go to slide 1"></button>
-            <button class="hero-dot h-2.5 w-2.5 rounded-full bg-white/60" data-index="1" aria-label="Go to slide 2"></button>
-            <button class="hero-dot h-2.5 w-2.5 rounded-full bg-white/60" data-index="2" aria-label="Go to slide 3"></button>
-            <button class="hero-dot h-2.5 w-2.5 rounded-full bg-white/60" data-index="3" aria-label="Go to slide 4"></button>
+            {% if carousel_images %}
+                {% for img in carousel_images %}
+                <button class="hero-dot h-2.5 w-2.5 rounded-full bg-white/60" data-index="{{ forloop.counter0 }}" aria-label="Go to slide {{ forloop.counter }}"></button>
+                {% endfor %}
+            {% else %}
+                <button class="hero-dot h-2.5 w-2.5 rounded-full bg-white/60" data-index="0" aria-label="Go to slide 1"></button>
+                <button class="hero-dot h-2.5 w-2.5 rounded-full bg-white/60" data-index="1" aria-label="Go to slide 2"></button>
+                <button class="hero-dot h-2.5 w-2.5 rounded-full bg-white/60" data-index="2" aria-label="Go to slide 3"></button>
+                <button class="hero-dot h-2.5 w-2.5 rounded-full bg-white/60" data-index="3" aria-label="Go to slide 4"></button>
+            {% endif %}
         </div>
+        {% endif %}
     </div>
 </section>
+
+<script>
+/* Self-contained carousel logic — works for any number of slides, including
+   a single real image (nav/dots are hidden by the template in that case) or
+   zero real images (falls back to the 4 static placeholders above). This
+   does not assume anything about main.js, so it keeps working regardless of
+   how many images an admin uploads. */
+(function () {
+    var track = document.getElementById('hero-track');
+    if (!track) return;
+
+    var slides = track.querySelectorAll('.hero-slide');
+    var dots = document.querySelectorAll('#hero-dots .hero-dot');
+    var prevBtn = document.getElementById('hero-prev');
+    var nextBtn = document.getElementById('hero-next');
+    var total = slides.length;
+    var current = 0;
+    var timer = null;
+
+    if (total === 0) return;
+
+    function goTo(index) {
+        current = (index + total) % total;
+        track.style.transform = 'translateX(-' + (current * 100) + '%)';
+        dots.forEach(function (dot, i) {
+            dot.classList.toggle('bg-white', i === current);
+            dot.classList.toggle('bg-white/60', i !== current);
+        });
+    }
+
+    function next() { goTo(current + 1); }
+    function prev() { goTo(current - 1); }
+
+    function startAutoplay() {
+        if (total <= 1) return;
+        clearInterval(timer);
+        timer = setInterval(next, 5000);
+    }
+
+    if (prevBtn) prevBtn.addEventListener('click', function () { prev(); startAutoplay(); });
+    if (nextBtn) nextBtn.addEventListener('click', function () { next(); startAutoplay(); });
+    dots.forEach(function (dot, i) {
+        dot.addEventListener('click', function () { goTo(i); startAutoplay(); });
+    });
+
+    goTo(0);
+    startAutoplay();
+})();
+</script>
