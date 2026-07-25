@@ -24,6 +24,7 @@ from .models import (
     SavedJobListing,
     SavedNotice,
     User,
+    CarouselImage,
 )
 
 from .generators import (
@@ -39,6 +40,8 @@ from .generators import (
 # =============================================================================
 
 def home(request):
+    carousel_images = CarouselImage.objects.filter(is_active=True).order_by("order", "-created_at")
+
     notices_qs = Notice.objects.order_by("-issue_date", "-created_at")[:4]
     jobs_qs = JobListing.objects.filter(is_active=True).order_by("-created_at")[:4]
 
@@ -70,6 +73,7 @@ def home(request):
         "notices": notices,
         "jobs": jobs,
         "stats": stats,
+        "carousel_images": carousel_images,
         "marquee_notices_json": json.dumps(marquee_notices, ensure_ascii=False),
     })
 

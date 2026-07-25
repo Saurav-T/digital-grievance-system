@@ -1,4 +1,8 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.urls import path
+
+from digitalgrievance import settings
 from . import views
 
 
@@ -40,3 +44,6 @@ urlpatterns = [
     path("api/jobs/<int:pk>/save/", views.toggle_save_job, name="toggle_save_job"),
     path("api/notifications/settings/", views.update_notification_setting, name="update_notification_setting"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
