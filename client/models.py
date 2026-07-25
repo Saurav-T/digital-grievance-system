@@ -366,3 +366,119 @@ class NotificationPreference(models.Model):
 
     def __str__(self):
         return f"Notification preferences for {self.user}"
+
+
+# ---------------------------------------------------------------------------
+# Notification (real, DB-backed — powers the header bell + /notifications/)
+# ---------------------------------------------------------------------------
+
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ("grievance", "Grievance"),
+        ("job", "Job"),
+        ("notice", "Notice"),
+    ]
+
+    user       = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
+    type       = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    title      = models.CharField(max_length=255)
+    body       = models.CharField(max_length=500, blank=True)
+    url        = models.CharField(max_length=255, blank=True, default="#")
+    is_read    = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "notifications"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "is_read"]),
+            models.Index(fields=["user", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"[{self.type}] {self.title} → {self.user}"
+
+
+# Friendly labels for each grievance status, used when composing notification text.
+GRIEVANCE_STATUS_LABELS = {
+    "Pending":   "Submitted",
+    "In Review": "Accepted for Review",
+    "Resolved":  "Resolved",
+    "Rejected":  "Rejected",
+}
+
+
+def _notif_pref_allows(user, ntype):
+    """Return True if `user` currently has this notification type enabled
+    (defaults to True if no preference row exists yet)."""
+    pref = NotificationPreference.objects.filter(user=user).first()
+    if not pref:
+        return True
+    return {
+        "grievance": pref.grievance_updates,
+        "notice": pref.new_notices,
+        "job": pref.new_job_listings,
+    }.get(ntype, True)
+
+
+def create_notification(user, ntype, title, body="", url="#"):
+    """Create a single Notification for `user`, respecting their preference
+    toggle for this type. Returns the created Notification, or None if the
+    user has this notification type disabled."""
+    if not _notif_pref_allows(user, ntype):
+        return None
+    return Notification.objects.create(
+        user=user, type=ntype, title=title[:255], body=(body or "")[:500], url=url or "#",
+    )
+
+
+def notify_grievance_status(grievance, status):
+    """Notify a grievance's owner that its status is now `status`
+    (one of Grievance.STATUS_CHOICES), respecting their preference."""
+    from django.urls import reverse
+    label = GRIEVANCE_STATUS_LABELS.get(status, status)
+    subject = grievance.subject
+    url = reverse("grievance_detail", args=[grievance.id])
+
+    if status == "Pending":
+        title = "Grievance Submitted"
+        body = f'Your grievance "{subject}" has been submitted and is pending review.'
+    elif status == "In Review":
+        title = "Grievance Accepted for Review"
+        body = f'Your grievance "{subject}" has been accepted and is now under review.'
+    elif status == "Resolved":
+        title = "Grievance Resolved"
+        note = f" {grievance.resolution_note}" if grievance.resolution_note else ""
+        body = f'Your grievance "{subject}" has been resolved.{note}'
+    elif status == "Rejected":
+        title = "Grievance Rejected"
+        note = f" Reason: {grievance.resolution_note}" if grievance.resolution_note else ""
+        body = f'Your grievance "{subject}" has been rejected.{note}'
+    else:
+        title = f"Grievance Status: {label}"
+        body = f'Your grievance "{subject}" status changed to {label}.'
+
+    return create_notification(grievance.user, "grievance", title, body, url)
+
+
+def notify_all_citizens(ntype, title, body="", url="#"):
+    """Broadcast a notification (new notice / new job listing) to every
+    active citizen who currently has this notification type enabled."""
+    citizens = User.objects.filter(user_type="Citizen", is_active=True)
+    prefs_by_user = {
+        p.user_id: p
+        for p in NotificationPreference.objects.filter(user__in=citizens)
+    }
+    field = {"notice": "new_notices", "job": "new_job_listings"}.get(ntype, None)
+
+    to_create = []
+    for u in citizens:
+        pref = prefs_by_user.get(u.id)
+        enabled = getattr(pref, field, True) if (pref and field) else True
+        if enabled:
+            to_create.append(Notification(
+                user=u, type=ntype, title=title[:255], body=(body or "")[:500], url=url or "#",
+            ))
+    if to_create:
+        Notification.objects.bulk_create(to_create)
+    return len(to_create)

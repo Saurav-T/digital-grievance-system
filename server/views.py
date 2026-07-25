@@ -10,11 +10,13 @@ from django.db.models import Count
 from django.db.models.functions import TruncMonth
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from client.models import (
     Category, Grievance, GrievanceStatusHistory, JobListing, Notice, User,
+    notify_grievance_status, notify_all_citizens,
 )
 
 
@@ -460,6 +462,7 @@ def grievances(request):
                 GrievanceStatusHistory.objects.create(
                     grievance=grievance, status="Resolved",
                     remarks=note, updated_by=request.user)
+                notify_grievance_status(grievance, "Resolved")
                 messages.success(request, f"Grievance #{grievance.id} resolved.")
 
             elif action == "reject":
@@ -471,6 +474,7 @@ def grievances(request):
                 GrievanceStatusHistory.objects.create(
                     grievance=grievance, status="Rejected",
                     remarks=reason, updated_by=request.user)
+                notify_grievance_status(grievance, "Rejected")
                 messages.success(request, f"Grievance #{grievance.id} rejected.")
 
             elif action == "edit":
@@ -486,6 +490,7 @@ def grievances(request):
                     GrievanceStatusHistory.objects.create(
                         grievance=grievance, status=new_status,
                         remarks="Updated via admin panel", updated_by=request.user)
+                    notify_grievance_status(grievance, new_status)
                 grievance.save()
                 messages.success(request, "Grievance updated.")
 
@@ -648,6 +653,12 @@ def notices(request):
                 if "image" in request.FILES:
                     n.image = request.FILES["image"]
                 n.save()
+                notify_all_citizens(
+                    "notice",
+                    f"New Notice: {n.title}",
+                    body=n.description,
+                    url=reverse("notice_detail", args=[n.id]),
+                )
                 messages.success(request, "Notice created.")
 
             elif action == "edit":
@@ -696,7 +707,7 @@ def jobs(request):
         action = request.POST.get("action")
         try:
             if action == "add":
-                JobListing.objects.create(
+                j = JobListing.objects.create(
                     job_title=request.POST["job_title"],
                     department=request.POST["department"],
                     department_location=request.POST["department_location"],
@@ -708,6 +719,12 @@ def jobs(request):
                     contact_information=request.POST["contact_information"],
                     is_active=True,
                     created_by=request.user,
+                )
+                notify_all_citizens(
+                    "job",
+                    f"New Job Listing: {j.job_title}",
+                    body=f"{j.department} · Deadline: {j.deadline.strftime('%d %b %Y')}",
+                    url=reverse("job_detail", args=[j.id]),
                 )
                 messages.success(request, "Job listing created.")
 

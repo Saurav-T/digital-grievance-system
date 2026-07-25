@@ -19,11 +19,15 @@ from .models import (
     GrievanceStatusHistory,
     JobListing,
     Notice,
+    Notification,
     NotificationPreference,
     NoticeView,
     SavedJobListing,
     SavedNotice,
     User,
+    create_notification,
+    notify_grievance_status,
+    notify_all_citizens,
 )
 
 from .generators import (
@@ -412,6 +416,7 @@ def grievances(request):
             remarks="Submitted by citizen.",
             updated_by=request.user,
         )
+        notify_grievance_status(grievance, "Pending")
 
         messages.success(request, "Your grievance has been submitted successfully.")
         return redirect("track_grievance")
@@ -864,5 +869,50 @@ def profile(request):
     })
 
 
+@login_required(login_url="login")
 def notifications(request):
+    """Renders the full notifications page. The list itself is fetched by
+    the page's own JS from /api/notifications/ so both this page and the
+    header dropdown always show the same, real, DB-backed data."""
     return render(request, "client/notifications.html")
+
+
+@login_required(login_url="login")
+def notifications_api(request):
+    """GET -> the current user's notifications (newest first) plus an
+    unread count, used by both the header bell dropdown and the full
+    /notifications/ page. Everything (search, type filter, unread-only,
+    pagination) is done client-side against this single payload."""
+    qs = Notification.objects.filter(user=request.user).order_by("-created_at")[:300]
+    data = [
+        {
+            "id": n.id,
+            "type": n.type,
+            "title": n.title,
+            "body": n.body,
+            "url": n.url or "#",
+            "read": n.is_read,
+            "ts": int(n.created_at.timestamp() * 1000),
+        }
+        for n in qs
+    ]
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    return JsonResponse({"notifications": data, "unread_count": unread_count})
+
+
+@login_required(login_url="login")
+@require_POST
+def mark_notification_read(request, pk):
+    n = get_object_or_404(Notification, pk=pk, user=request.user)
+    if not n.is_read:
+        n.is_read = True
+        n.save(update_fields=["is_read"])
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    return JsonResponse({"success": True, "unread_count": unread_count})
+
+
+@login_required(login_url="login")
+@require_POST
+def mark_all_notifications_read(request):
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return JsonResponse({"success": True, "unread_count": 0})
