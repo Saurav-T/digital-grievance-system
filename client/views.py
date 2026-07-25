@@ -19,12 +19,15 @@ from .models import (
     GrievanceStatusHistory,
     JobListing,
     Notice,
+    Notification,
     NotificationPreference,
     NoticeView,
     SavedJobListing,
     SavedNotice,
     User,
-    CarouselImage,
+    create_notification,
+    notify_grievance_status,
+    notify_all_citizens,
 )
 
 from .generators import (
@@ -40,14 +43,13 @@ from .generators import (
 # =============================================================================
 
 def home(request):
-    carousel_images = CarouselImage.objects.filter(is_active=True).order_by("order", "-created_at")
-
     notices_qs = Notice.objects.order_by("-issue_date", "-created_at")[:4]
     jobs_qs = JobListing.objects.filter(is_active=True).order_by("-created_at")[:4]
 
     notices = [
         {"id": n.id, "title": n.title,
-         "posted_at": n.issue_date.strftime("%B %d, %Y, %I:%M %p") if n.issue_date else ""}
+         "posted_at": n.issue_date.strftime("%B %d, %Y, %I:%M %p") if n.issue_date else "",
+         "category": n.category, "category_label": n.category_label, "category_colour": n.category_colour}
         for n in notices_qs
     ]
     jobs = [
@@ -73,7 +75,6 @@ def home(request):
         "notices": notices,
         "jobs": jobs,
         "stats": stats,
-        "carousel_images": carousel_images,
         "marquee_notices_json": json.dumps(marquee_notices, ensure_ascii=False),
     })
 
@@ -212,6 +213,8 @@ def notices(request):
             "title": notice.title,
             "posted_at": notice.issue_date.strftime("%B %d, %Y, %I:%M %p") if notice.issue_date else "",
             "category": notice.category,
+            "category_label": notice.category_label,
+            "category_colour": notice.category_colour,
             "description": notice.description,
             "is_saved": notice.id in saved_ids,
         }
@@ -220,6 +223,7 @@ def notices(request):
 
     return render(request, "client/notices.html", {
         "notices": notice_payload,
+        "category_choices": Notice.CATEGORY_CHOICES,
         "marquee_notices_json": json.dumps(
             [{"text": n["title"], "url": f"/notices/{n['id']}/"} for n in notice_payload],
             ensure_ascii=False,
@@ -254,6 +258,9 @@ def notice_detail(request, pk):
         "doc_title": notice.title,
         "doc_date": notice.issue_date.strftime("%d/%m/%Y") if notice.issue_date else "",
         "body": notice.description,
+        "category": notice.category,
+        "category_label": notice.category_label,
+        "category_colour": notice.category_colour,
         "attached_media": [],
         "is_saved": is_saved,
     }
@@ -263,6 +270,8 @@ def notice_detail(request, pk):
             "id": recent.id,
             "title": recent.title,
             "date": recent.issue_date.strftime("%B %d, %Y, %I:%M %p") if recent.issue_date else "",
+            "category_label": recent.category_label,
+            "category_colour": recent.category_colour,
         }
         for recent in recent_notices
     ]
@@ -407,6 +416,7 @@ def grievances(request):
             remarks="Submitted by citizen.",
             updated_by=request.user,
         )
+        notify_grievance_status(grievance, "Pending")
 
         messages.success(request, "Your grievance has been submitted successfully.")
         return redirect("track_grievance")
@@ -859,5 +869,50 @@ def profile(request):
     })
 
 
+@login_required(login_url="login")
 def notifications(request):
+    """Renders the full notifications page. The list itself is fetched by
+    the page's own JS from /api/notifications/ so both this page and the
+    header dropdown always show the same, real, DB-backed data."""
     return render(request, "client/notifications.html")
+
+
+@login_required(login_url="login")
+def notifications_api(request):
+    """GET -> the current user's notifications (newest first) plus an
+    unread count, used by both the header bell dropdown and the full
+    /notifications/ page. Everything (search, type filter, unread-only,
+    pagination) is done client-side against this single payload."""
+    qs = Notification.objects.filter(user=request.user).order_by("-created_at")[:300]
+    data = [
+        {
+            "id": n.id,
+            "type": n.type,
+            "title": n.title,
+            "body": n.body,
+            "url": n.url or "#",
+            "read": n.is_read,
+            "ts": int(n.created_at.timestamp() * 1000),
+        }
+        for n in qs
+    ]
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    return JsonResponse({"notifications": data, "unread_count": unread_count})
+
+
+@login_required(login_url="login")
+@require_POST
+def mark_notification_read(request, pk):
+    n = get_object_or_404(Notification, pk=pk, user=request.user)
+    if not n.is_read:
+        n.is_read = True
+        n.save(update_fields=["is_read"])
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    return JsonResponse({"success": True, "unread_count": unread_count})
+
+
+@login_required(login_url="login")
+@require_POST
+def mark_all_notifications_read(request):
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return JsonResponse({"success": True, "unread_count": 0})

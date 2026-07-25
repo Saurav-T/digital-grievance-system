@@ -1,8 +1,4 @@
-from django.conf import settings
-from django.conf.urls.static import static
 from django.urls import path
-
-from digitalgrievance import settings
 from . import views
 
 
@@ -43,7 +39,7 @@ urlpatterns = [
     path("api/notices/<int:pk>/save/", views.toggle_save_notice, name="toggle_save_notice"),
     path("api/jobs/<int:pk>/save/", views.toggle_save_job, name="toggle_save_job"),
     path("api/notifications/settings/", views.update_notification_setting, name="update_notification_setting"),
+    path("api/notifications/", views.notifications_api, name="notifications_api"),
+    path("api/notifications/<int:pk>/read/", views.mark_notification_read, name="mark_notification_read"),
+    path("api/notifications/mark-all-read/", views.mark_all_notifications_read, name="mark_all_notifications_read"),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

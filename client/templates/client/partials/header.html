@@ -27,6 +27,7 @@
 
       <!-- Right controls -->
       <div class="flex items-center gap-0.5 sm:gap-1">
+        {% if request.user.is_authenticated %}
         <!-- Notification bell -->
         <div class="relative" id="notif-container">
           <button
@@ -127,6 +128,7 @@
             </div>
           </div>
         </div>
+        {% endif %}
 
         <!-- Profile icon -->
         <a
@@ -216,64 +218,12 @@
 
 <script>
   (function () {
-    /* ── Notification system ─────────────────────────────────────── */
-    var READ_STORAGE_KEY = "dgnbs_notif_read";
-    var DEMO = [
-      {
-        id: 1,
-        type: "notice",
-        title: "New Notice Published",
-        body: "नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना",
-        ts: Date.now() - 7200000,
-        read: false,
-        url: "/notices/1/",
-      },
-      {
-        id: 2,
-        type: "grievance",
-        title: "Grievance #042 Resolved",
-        body: "Your grievance about Road Blockage has been resolved.",
-        ts: Date.now() - 18000000,
-        read: false,
-        url: "#",
-      },
-      {
-        id: 3,
-        type: "job",
-        title: "New Job Listing Available",
-        body: "Computer Operator – Ministry of Education. Deadline: 30 July 2026.",
-        ts: Date.now() - 86400000,
-        read: false,
-        url: "/jobs/1/",
-      },
-      {
-        id: 4,
-        type: "notice",
-        title: "Public Holiday Announcement",
-        body: "Government offices closed Tuesday 7 July 2026.",
-        ts: Date.now() - 172800000,
-        read: true,
-        url: "/notices/4/",
-      },
-      {
-        id: 5,
-        type: "grievance",
-        title: "Grievance #039 Under Review",
-        body: "Your grievance is now being reviewed by the authority.",
-        ts: Date.now() - 259200000,
-        read: true,
-        url: "#",
-      },
-      {
-        id: 6,
-        type: "job",
-        title: "New Job Listing Available",
-        body: "Data Entry Operator – Ministry of Home Affairs. Deadline: 15 Aug.",
-        ts: Date.now() - 345600000,
-        read: true,
-        url: "/jobs/2/",
-      },
-    ];
+    /* ── Notification system (real, DB-backed) ──────────────────────
+       Source of truth is /api/notifications/ (see client/views.py). Both
+       this header dropdown and the full /notifications/ page hit the same
+       endpoint, so unread counts and read-state always agree between them
+       — no more localStorage drift. */
+    var IS_AUTH = {{ request.user.is_authenticated|yesno:"true,false" }};
     var CFG = {
       notice: {
         lbl: "Notice",
@@ -289,27 +239,13 @@
       },
       job: { lbl: "Job", bg: "bg-green-50", tx: "text-green-700", ic: "💼" },
     };
-    var notifs = DEMO,
-      filters = new Set();
+    var notifs = [];
+    var filters = new Set();
+    var pollTimer = null;
 
-    /* Read-state is shared with the full notifications page via localStorage,
-     so items marked read/unread stay in sync in both places. */
-    function getReadIds() {
-      try {
-        return new Set(
-          JSON.parse(localStorage.getItem(READ_STORAGE_KEY) || "[]"),
-        );
-      } catch (e) {
-        return new Set();
-      }
-    }
-    function saveReadIds(set) {
-      try {
-        localStorage.setItem(READ_STORAGE_KEY, JSON.stringify([...set]));
-      } catch (e) {}
-    }
-    function isRead(n) {
-      return n.read || getReadIds().has(n.id);
+    function getCookie(name) {
+      var v = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
+      return v ? v.pop() : "";
     }
 
     function ago(ts) {
@@ -319,33 +255,64 @@
       if (s < 86400) return Math.floor(s / 3600) + "h ago";
       return Math.floor(s / 86400) + "d ago";
     }
-    function filtered() {
+    function filteredNotifs() {
       return !filters.size
         ? notifs
         : notifs.filter(function (n) {
             return filters.has(n.type);
           });
     }
-    function unread() {
-      return notifs.filter(function (n) {
-        return !isRead(n);
-      }).length;
-    }
-    function badge() {
+    function badge(count) {
       var b = document.getElementById("notif-badge");
       if (!b) return;
-      var c = unread();
-      if (!c) {
+      if (!count) {
         b.classList.add("hidden");
         return;
       }
       b.classList.remove("hidden");
-      b.textContent = c > 9 ? "9+" : c;
+      b.textContent = count > 9 ? "9+" : count;
     }
+
+    /* Pull the latest notifications + unread count from the server. */
+    function fetchNotifications() {
+      if (!IS_AUTH) return;
+      fetch("/api/notifications/")
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          notifs = data.notifications || [];
+          badge(data.unread_count || 0);
+          render();
+        })
+        .catch(function (e) { console.error("Failed to load notifications:", e); });
+    }
+
+    function markRead(id) {
+      var n = notifs.find(function (x) { return x.id === id; });
+      if (n) n.read = true;
+      fetch("/api/notifications/" + id + "/read/", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) { badge(data.unread_count || 0); })
+        .catch(function () {});
+      render();
+    }
+
+    function markAllRead() {
+      notifs.forEach(function (n) { n.read = true; });
+      badge(0);
+      render();
+      fetch("/api/notifications/mark-all-read/", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+      }).catch(function () {});
+    }
+
     function render() {
       var lst = document.getElementById("notif-list");
       if (!lst) return;
-      var items = filtered();
+      var items = filteredNotifs();
       if (!items.length) {
         lst.innerHTML =
           '<p class="text-center text-xs text-gray-400 py-8">No notifications.</p>';
@@ -354,7 +321,7 @@
       lst.innerHTML = items
         .map(function (n) {
           var c = CFG[n.type] || CFG.notice;
-          var read = isRead(n);
+          var read = n.read;
           return (
             '<a href="' +
             n.url +
@@ -400,20 +367,11 @@
       lst.querySelectorAll(".notif-item").forEach(function (el) {
         el.addEventListener("click", function (e) {
           e.preventDefault();
-          var id = parseInt(this.dataset.id),
-            href = this.getAttribute("href");
-          var n = notifs.find(function (x) {
-            return x.id === id;
-          });
-          if (n && !isRead(n)) {
-            n.read = true;
-            var ids = getReadIds();
-            ids.add(id);
-            saveReadIds(ids);
-            render();
-            badge();
-          }
-          if (href && href != "#")
+          var id = parseInt(this.dataset.id, 10);
+          var href = this.getAttribute("href");
+          var n = notifs.find(function (x) { return x.id === id; });
+          if (n && !n.read) markRead(id);
+          if (href && href !== "#")
             setTimeout(function () {
               window.location.href = href;
             }, 80);
@@ -422,31 +380,28 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-      badge();
-      render();
       var tog = document.getElementById("notif-toggle");
       var drp = document.getElementById("notif-dropdown");
       var cnt = document.getElementById("notif-container");
+
+      if (IS_AUTH) {
+        fetchNotifications();
+        // Light polling so the badge stays fresh across tabs/sessions.
+        pollTimer = setInterval(fetchNotifications, 45000);
+      }
+
       if (tog)
         tog.addEventListener("click", function (e) {
           e.stopPropagation();
           drp.classList.toggle("hidden");
+          if (!drp.classList.contains("hidden")) fetchNotifications();
         });
       document.addEventListener("click", function (e) {
         if (cnt && !cnt.contains(e.target)) drp.classList.add("hidden");
       });
       var ma = document.getElementById("notif-mark-all");
-      if (ma)
-        ma.addEventListener("click", function () {
-          var ids = getReadIds();
-          notifs.forEach(function (n) {
-            n.read = true;
-            ids.add(n.id);
-          });
-          saveReadIds(ids);
-          render();
-          badge();
-        });
+      if (ma) ma.addEventListener("click", markAllRead);
+
       ["grievance", "job", "notice"].forEach(function (t) {
         var cb = document.getElementById("nf-" + t);
         if (!cb) return;
@@ -480,7 +435,7 @@
 
       /* ── Marquee — clickable {text,url} objects ────────────────
        window.MARQUEE_NOTICES is injected by base.html from view context.
-       Falls back to hardcoded items if not provided.                    */
+       Falls back to a neutral message if not provided. */
       var MN = window.MARQUEE_NOTICES || [
         {
           text: "No New Notices",

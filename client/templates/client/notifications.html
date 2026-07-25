@@ -59,7 +59,7 @@
   <!-- Search + Filter -->
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
     <div class="search-wrapper flex items-center gap-2 w-full sm:w-auto">
-      <input id="notif-search" type="text" placeholder="Search"
+      <input id="notif-search" type="text" placeholder="Search notifications…"
              class="w-full sm:w-64 lg:w-72 px-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-500
                     border border-gray-300 rounded bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-blue"/>
       <button id="notif-search-btn" type="button"
@@ -114,9 +114,6 @@
 
   <!-- Pagination -->
   <nav id="notif-page-pagination" aria-label="Pagination" class="mt-10 flex flex-wrap items-center justify-center gap-1"></nav>
-
-  <script id="notif-page-data" type="application/json"></script>
-  {{ notifications|json_script:"notif-page-data-json" }}
 </section>
 {% endblock %}
 
@@ -124,7 +121,6 @@
 <script>
 (function () {
   const PER_PAGE = 8;
-  const READ_STORAGE_KEY = 'dgnbs_notif_read';
 
   const listEl = document.getElementById('notif-page-list');
   const emptyState = document.getElementById('notif-page-empty');
@@ -148,42 +144,9 @@
   let filtered = [];
   let currentPage = 1;
 
-  // Same shape as the header notification demo data: {id,type,title,body,ts,read,url}
-  const DEMO = [
-    {id:1,type:'notice',   title:'New Notice Published',      body:'नवीकरण तथा बेरूजु रकम दाखिला गर्ने सम्बन्धी सूचना', ts:Date.now()-7200000,  read:false,url:'/notices/1/'},
-    {id:2,type:'grievance',title:'Grievance #042 Resolved',   body:'Your grievance about Road Blockage has been resolved.', ts:Date.now()-18000000, read:false,url:'#'},
-    {id:3,type:'job',      title:'New Job Listing Available', body:'Computer Operator – Ministry of Education. Deadline: 30 July 2026.', ts:Date.now()-86400000, read:false,url:'/jobs/1/'},
-    {id:4,type:'notice',   title:'Public Holiday Announcement',body:'Government offices closed Tuesday 7 July 2026.',ts:Date.now()-172800000,read:true, url:'/notices/4/'},
-    {id:5,type:'grievance',title:'Grievance #039 Under Review',body:'Your grievance is now being reviewed by the authority.',ts:Date.now()-259200000,read:true, url:'#'},
-    {id:6,type:'job',      title:'New Job Listing Available', body:'Data Entry Operator – Ministry of Home Affairs. Deadline: 15 Aug.',ts:Date.now()-345600000,read:true,url:'/jobs/2/'},
-  ];
-
-  try {
-    const raw = JSON.parse(document.getElementById('notif-page-data-json').textContent);
-    allNotifs = (Array.isArray(raw) && raw.length) ? raw : DEMO;
-  } catch (error) {
-    allNotifs = DEMO;
-  }
-
-  function getReadIds() {
-    try { return new Set(JSON.parse(localStorage.getItem(READ_STORAGE_KEY) || '[]')); }
-    catch { return new Set(); }
-  }
-  function saveReadIds(set) {
-    try { localStorage.setItem(READ_STORAGE_KEY, JSON.stringify([...set])); } catch {}
-  }
-  function isRead(n) {
-    return n.read || getReadIds().has(n.id);
-  }
-  function markRead(id) {
-    const ids = getReadIds();
-    ids.add(id);
-    saveReadIds(ids);
-  }
-  function markAllRead() {
-    const ids = getReadIds();
-    allNotifs.forEach(n => ids.add(n.id));
-    saveReadIds(ids);
+  function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
   }
 
   function ago(ts) {
@@ -192,6 +155,34 @@
     if (s < 3600) return Math.floor(s / 60) + 'm ago';
     if (s < 86400) return Math.floor(s / 3600) + 'h ago';
     return Math.floor(s / 86400) + 'd ago';
+  }
+
+  function fetchNotifications() {
+    fetch('/api/notifications/')
+      .then(r => r.json())
+      .then(data => {
+        allNotifs = data.notifications || [];
+        applyFilters();
+      })
+      .catch(err => console.error('Failed to load notifications:', err));
+  }
+
+  function markRead(id) {
+    const n = allNotifs.find(x => x.id === id);
+    if (n) n.read = true;
+    fetch('/api/notifications/' + id + '/read/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    }).catch(() => {});
+  }
+
+  function markAllRead() {
+    allNotifs.forEach(n => { n.read = true; });
+    applyFilters();
+    fetch('/api/notifications/mark-all-read/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    }).catch(() => {});
   }
 
   function applyFilters() {
@@ -203,7 +194,7 @@
       const haystack = `${n.title} ${n.body}`.toLowerCase();
       if (q && !haystack.includes(q)) return false;
       if (activeTypes.length && !activeTypes.includes(n.type)) return false;
-      if (unreadOnly && isRead(n)) return false;
+      if (unreadOnly && n.read) return false;
       return true;
     }).sort((a, b) => b.ts - a.ts);
 
@@ -224,7 +215,7 @@
       emptyState.classList.add('hidden');
       listEl.innerHTML = pageItems.map(n => {
         const c = CFG[n.type] || CFG.notice;
-        const read = isRead(n);
+        const read = n.read;
         return `
           <a href="${n.url}" data-id="${n.id}"
    class="notif-row flex gap-4 px-4 sm:px-5 py-4
@@ -236,7 +227,7 @@
             <div class="flex-shrink-0 w-11 h-11 rounded-full ${c.bg} flex items-center justify-center text-lg leading-none">${c.ic}</div>
             <div class="flex-1 min-w-0">
               <div class="flex items-start justify-between gap-2">
-                <p class="text-sm font-semibold text-gray-900 leading-tight ${read ? '' : ''}">${n.title}</p>
+                <p class="text-sm font-semibold text-gray-900 leading-tight">${n.title}</p>
                 ${!read ? '<span class="w-2 h-2 rounded-full bg-brand-blue mt-1 flex-shrink-0"></span>' : ''}
               </div>
               <p class="text-sm text-gray-500 mt-1 line-clamp-2">${n.body}</p>
@@ -251,7 +242,8 @@
       listEl.querySelectorAll('.notif-row').forEach(row => {
         row.addEventListener('click', e => {
           const id = parseInt(row.dataset.id, 10);
-          markRead(id);
+          const wasUnread = row.classList.contains('is-unread');
+          if (wasUnread) markRead(id);
           const href = row.getAttribute('href');
           if (!href || href === '#') {
             e.preventDefault();
@@ -322,12 +314,9 @@
   filterChecks.forEach(check => check.addEventListener('change', applyFilters));
   unreadCheck.addEventListener('change', applyFilters);
 
-  markAllBtn.addEventListener('click', () => {
-    markAllRead();
-    applyFilters();
-  });
+  markAllBtn.addEventListener('click', markAllRead);
 
-  applyFilters();
+  fetchNotifications();
 })();
 </script>
 {% endblock %}
