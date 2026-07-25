@@ -22,19 +22,29 @@
                    placeholder="Search notices by title…"
                    class="adm-input pl-9 text-sm">
         </div>
-        <select id="filter-notices-author" onchange="filterNotices()"
-                class="adm-input text-sm w-auto sm:ml-auto">
-            <option value="all">All Authors</option>
-        </select>
+        <div class="flex gap-2 sm:ml-auto">
+            <select id="filter-notices-category" onchange="filterNotices()"
+                    class="adm-input text-sm w-auto">
+                <option value="all">All Categories</option>
+                {% for value, label in category_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+            <select id="filter-notices-author" onchange="filterNotices()"
+                    class="adm-input text-sm w-auto">
+                <option value="all">All Authors</option>
+            </select>
+        </div>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full admin-table">
-            <thead><tr><th>ID</th><th>Title</th><th>Issue Date</th><th>Created By</th><th>Added</th><th>Actions</th></tr></thead>
+            <thead><tr><th>ID</th><th>Title</th><th>Category</th><th>Issue Date</th><th>Created By</th><th>Added</th><th>Actions</th></tr></thead>
             <tbody id="table-notices-body">
                 {% for n in notices %}
-                <tr data-author="{{ n.created_by.get_full_name|default:'' }}">
+                <tr data-author="{{ n.created_by.get_full_name|default:'' }}" data-category="{{ n.category }}">
                     <td class="font-mono text-xs text-gray-400">#{{ n.id }}</td>
                     <td class="font-medium max-w-xs truncate" title="{{ n.title }}">{{ n.title }}</td>
+                    <td><span class="badge {{ n.category_colour }}">{{ n.category_label }}</span></td>
                     <td class="whitespace-nowrap text-sm">{{ n.issue_date|date:"d M Y" }}</td>
                     <td class="text-sm text-gray-500">{{ n.created_by.get_full_name|default:"—" }}</td>
                     <td class="text-xs text-gray-400 whitespace-nowrap">{{ n.created_at|date:"d M Y" }}</td>
@@ -50,7 +60,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="6" class="text-center py-10 text-gray-400">No notices yet.</td></tr>
+                <tr><td colspan="7" class="text-center py-10 text-gray-400">No notices yet.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -84,6 +94,12 @@
             <div class="p-6 space-y-4">
                 <div><label class="adm-label">Title *</label>
                     <input type="text" name="title" required class="adm-input"></div>
+                <div><label class="adm-label">Category *</label>
+                    <select name="category" required class="adm-input bg-white">
+                        {% for value, label in category_choices %}
+                        <option value="{{ value }}" {% if value == "general" %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select></div>
                 <div><label class="adm-label">Issue Date *</label>
                     <input type="datetime-local" name="issue_date" required class="adm-input"></div>
                 <div><label class="adm-label">Description *</label>
@@ -116,6 +132,12 @@
             <div class="p-6 space-y-4">
                 <div><label class="adm-label">Title *</label>
                     <input type="text" name="title" id="en-title" required class="adm-input"></div>
+                <div><label class="adm-label">Category *</label>
+                    <select name="category" id="en-category" required class="adm-input bg-white">
+                        {% for value, label in category_choices %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select></div>
                 <div><label class="adm-label">Issue Date *</label>
                     <input type="datetime-local" name="issue_date" id="en-date" required class="adm-input"></div>
                 <div><label class="adm-label">Description *</label>
@@ -165,14 +187,32 @@
 <script>
 async function loadNoticeEdit(pk) {
     const d = await (await fetch(`/admin-panel/notices/${pk}/json/`)).json();
-    document.getElementById('en-id').value    = d.id;
-    document.getElementById('en-title').value = d.title;
-    document.getElementById('en-desc').value  = d.description;
-    document.getElementById('en-date').value  = d.issue_date;
+    document.getElementById('en-id').value       = d.id;
+    document.getElementById('en-title').value    = d.title;
+    document.getElementById('en-desc').value     = d.description;
+    document.getElementById('en-date').value     = d.issue_date;
+    document.getElementById('en-category').value = d.category;
     openModal('modal-edit-notice');
 }
 
-// ── Search + author filter for notices ───────────────────────
+async function openNoticeView(pk) {
+    const d = await (await fetch(`/admin-panel/notices/${pk}/json/`)).json();
+    const container = document.getElementById('nv-content');
+    container.innerHTML = `
+        <div class="space-y-4">
+            <div class="flex items-center justify-between gap-3">
+                <h4 class="text-lg font-semibold text-gray-900">${d.title}</h4>
+                <span class="badge ${d.category_colour}">${d.category_label}</span>
+            </div>
+            <p class="text-xs text-gray-400">Issued: ${d.issue_date_display || ''} · By: ${d.created_by}</p>
+            ${d.image ? `<img src="${d.image}" class="w-full rounded-lg border" alt="Notice image">` : ''}
+            <p class="text-sm text-gray-700 whitespace-pre-line">${d.description}</p>
+        </div>
+    `;
+    openModal('modal-view-notice');
+}
+
+// ── Search + category + author filter for notices ───────────────────────
 function populateNoticeAuthors() {
     var tbody = document.getElementById('table-notices-body');
     var select = document.getElementById('filter-notices-author');
@@ -193,6 +233,7 @@ function populateNoticeAuthors() {
 function filterNotices() {
     var q = document.getElementById('search-notices').value.trim().toLowerCase();
     var author = document.getElementById('filter-notices-author').value;
+    var category = document.getElementById('filter-notices-category').value;
     var tbody = document.getElementById('table-notices-body');
     if (!tbody) return;
     var rows = tbody.querySelectorAll('tr');
@@ -202,7 +243,8 @@ function filterNotices() {
         var text = row.textContent.toLowerCase();
         var matchesText = text.indexOf(q) !== -1;
         var matchesAuthor = author === 'all' || row.dataset.author === author;
-        var visible = matchesText && matchesAuthor;
+        var matchesCategory = category === 'all' || row.dataset.category === category;
+        var visible = matchesText && matchesAuthor && matchesCategory;
         row.classList.toggle('hidden', !visible);
         if (visible) visibleCount++;
     });

@@ -681,7 +681,10 @@ def notice_json(request, pk):
     return JsonResponse({
         "id": n.id, "title": n.title, "description": n.description,
         "category": n.category,
+        "category_label": n.category_label,
+        "category_colour": n.category_colour,
         "issue_date": n.issue_date.strftime("%Y-%m-%dT%H:%M") if n.issue_date else "",
+        "issue_date_display": n.issue_date.strftime("%d %b %Y, %I:%M %p") if n.issue_date else "",
         "image": n.image.url if n.image else "",
         "created_by": n.created_by.get_full_name() if n.created_by else "—",
     })

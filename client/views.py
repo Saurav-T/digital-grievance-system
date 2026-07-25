@@ -24,7 +24,6 @@ from .models import (
     SavedJobListing,
     SavedNotice,
     User,
-    CarouselImage,
 )
 
 from .generators import (
@@ -40,14 +39,13 @@ from .generators import (
 # =============================================================================
 
 def home(request):
-    carousel_images = CarouselImage.objects.filter(is_active=True).order_by("order", "-created_at")
-
     notices_qs = Notice.objects.order_by("-issue_date", "-created_at")[:4]
     jobs_qs = JobListing.objects.filter(is_active=True).order_by("-created_at")[:4]
 
     notices = [
         {"id": n.id, "title": n.title,
-         "posted_at": n.issue_date.strftime("%B %d, %Y, %I:%M %p") if n.issue_date else ""}
+         "posted_at": n.issue_date.strftime("%B %d, %Y, %I:%M %p") if n.issue_date else "",
+         "category": n.category, "category_label": n.category_label, "category_colour": n.category_colour}
         for n in notices_qs
     ]
     jobs = [
@@ -73,7 +71,6 @@ def home(request):
         "notices": notices,
         "jobs": jobs,
         "stats": stats,
-        "carousel_images": carousel_images,
         "marquee_notices_json": json.dumps(marquee_notices, ensure_ascii=False),
     })
 
@@ -212,6 +209,8 @@ def notices(request):
             "title": notice.title,
             "posted_at": notice.issue_date.strftime("%B %d, %Y, %I:%M %p") if notice.issue_date else "",
             "category": notice.category,
+            "category_label": notice.category_label,
+            "category_colour": notice.category_colour,
             "description": notice.description,
             "is_saved": notice.id in saved_ids,
         }
@@ -220,6 +219,7 @@ def notices(request):
 
     return render(request, "client/notices.html", {
         "notices": notice_payload,
+        "category_choices": Notice.CATEGORY_CHOICES,
         "marquee_notices_json": json.dumps(
             [{"text": n["title"], "url": f"/notices/{n['id']}/"} for n in notice_payload],
             ensure_ascii=False,
@@ -254,6 +254,9 @@ def notice_detail(request, pk):
         "doc_title": notice.title,
         "doc_date": notice.issue_date.strftime("%d/%m/%Y") if notice.issue_date else "",
         "body": notice.description,
+        "category": notice.category,
+        "category_label": notice.category_label,
+        "category_colour": notice.category_colour,
         "attached_media": [],
         "is_saved": is_saved,
     }
@@ -263,6 +266,8 @@ def notice_detail(request, pk):
             "id": recent.id,
             "title": recent.title,
             "date": recent.issue_date.strftime("%B %d, %Y, %I:%M %p") if recent.issue_date else "",
+            "category_label": recent.category_label,
+            "category_colour": recent.category_colour,
         }
         for recent in recent_notices
     ]

@@ -7,9 +7,11 @@ Usage:
   {% include "client/partials/home/notice_card.html" with notice=notice %}
 
 notice fields expected:
-  id        – int   (used for URL; falls back to 1 for demo)
-  title     – str   (clamped to 2 lines — all cards same height)
-  posted_at – str   (formatted date string)
+  id               – int   (used for URL; falls back to 1 for demo)
+  title            – str   (clamped to 2 lines — all cards same height)
+  posted_at        – str   (formatted date string)
+  category_label   – str   (optional; e.g. "Public Announcement")
+  category_colour  – str   (optional; Tailwind pill classes, e.g. "bg-blue-100 text-blue-700")
 
 TODO (DB): pass Notice queryset objects directly; field names match.
 {% endcomment %}
@@ -20,6 +22,14 @@ TODO (DB): pass Notice queryset objects directly; field names match.
           shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all
           p-4 min-h-[96px] h-full cursor-pointer group"
    data-title="{{ notice.title|lower }}">
+
+  <!-- Category pill -->
+  {% if notice.category_label %}
+  <span class="inline-block self-start text-[11px] font-semibold px-2 py-0.5 rounded-full mb-1.5
+               {{ notice.category_colour|default:"bg-gray-100 text-gray-700" }}">
+    {{ notice.category_label }}
+  </span>
+  {% endif %}
 
   <!-- Title — 2-line clamp keeps all cards equal height -->
   <p class="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 flex-1

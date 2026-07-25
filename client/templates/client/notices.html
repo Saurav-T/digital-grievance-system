@@ -125,11 +125,10 @@
             </svg>
           </button>
         </div>
-        <div class="space-y-2">
-          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="jobs"> Jobs</label>
-          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="government"> Government</label>
-          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="scholarships"> Scholarships</label>
-          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="events"> Events</label>
+        <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+          {% for value, label in category_choices %}
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="accent-brand-blue filter-check" data-filter="{{ value }}"> {{ label }}</label>
+          {% endfor %}
         </div>
       </div>
     </div>
@@ -266,6 +265,7 @@
             <a href="/notices/${notice.id}/" class="block cursor-pointer">
               <div class="h-20 bg-brand-blue relative overflow-hidden"></div>
               <div class="p-4">
+                <span class="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full mb-2 ${notice.category_colour || 'bg-gray-100 text-gray-700'}">${notice.category_label || 'General Notice'}</span>
                 <p class="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">${notice.title}</p>
                 <p class="text-xs text-gray-500 mt-2">${notice.posted_at}</p>
                 <p class="text-sm text-gray-600 mt-2 line-clamp-2">${notice.description}</p>

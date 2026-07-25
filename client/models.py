@@ -166,18 +166,39 @@ class Grievance(models.Model):
 # Notice
 # ---------------------------------------------------------------------------
 
+# Each entry: slug -> (display label, Tailwind pill classes).
+# Used for the admin "Add/Edit Notice" category dropdown and for rendering
+# the small category pill on notice cards / the notice detail page.
+NOTICE_CATEGORY_STYLES = {
+    "general":              ("General Notice",        "bg-gray-100 text-gray-700"),
+    "public_announcement":  ("Public Announcement",    "bg-blue-100 text-blue-700"),
+    "emergency_alert":      ("Emergency Alert",        "bg-red-100 text-red-700"),
+    "government_circular":  ("Government Circular",    "bg-indigo-100 text-indigo-700"),
+    "tender_procurement":   ("Tender & Procurement",   "bg-amber-100 text-amber-700"),
+    "vacancy_job":          ("Vacancy / Job Notice",   "bg-green-100 text-green-700"),
+    "examination_notice":   ("Examination Notice",     "bg-purple-100 text-purple-700"),
+    "meeting_notice":       ("Meeting Notice",         "bg-cyan-100 text-cyan-700"),
+    "holiday_notice":       ("Holiday Notice",         "bg-pink-100 text-pink-700"),
+    "policy_regulation":    ("Policy & Regulation",    "bg-slate-100 text-slate-700"),
+    "citizen_services":     ("Citizen Services",       "bg-teal-100 text-teal-700"),
+    "health_advisory":      ("Health Advisory",        "bg-rose-100 text-rose-700"),
+    "press_release":        ("Press Release",          "bg-orange-100 text-orange-700"),
+    "other":                ("Other",                  "bg-gray-100 text-gray-500"),
+}
+
+
+def notice_category_meta(category):
+    """Return (label, pill_colour_classes) for a Notice category slug,
+    falling back gracefully for unrecognised/legacy values."""
+    return NOTICE_CATEGORY_STYLES.get(category, (category.replace("_", " ").title() or "Other", "bg-gray-100 text-gray-500"))
+
+
 class Notice(models.Model):
-    CATEGORY_CHOICES = [
-        ("jobs",         "Jobs"),
-        ("government",   "Government"),
-        ("scholarships", "Scholarships"),
-        ("events",       "Events"),
-        ("general",      "General"),
-    ]
+    CATEGORY_CHOICES = [(slug, meta[0]) for slug, meta in NOTICE_CATEGORY_STYLES.items()]
 
     title       = models.CharField(max_length=255)
     description = models.TextField()
-    category    = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="general")
+    category    = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default="general")
     image       = models.ImageField(upload_to="notices/", null=True, blank=True)
     issue_date  = models.DateTimeField()
     created_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="notices")
@@ -189,6 +210,14 @@ class Notice(models.Model):
 
     def __str__(self):
         return self.title
+
+    @property
+    def category_label(self):
+        return notice_category_meta(self.category)[0]
+
+    @property
+    def category_colour(self):
+        return notice_category_meta(self.category)[1]
 
 
 # ---------------------------------------------------------------------------
