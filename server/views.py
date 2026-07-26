@@ -409,42 +409,6 @@ def user_json(request, pk):
     })
 
 
-@staff_required
-def categories(request):
-    if request.method == "POST":
-        action = request.POST.get("action")
-        try:
-            if action == "add":
-                Category.objects.create(
-                    name=request.POST["name"],
-                    description=request.POST.get("description", ""),
-                )
-                messages.success(request, "Category created.")
-
-            elif action == "edit":
-                cat = get_object_or_404(Category, pk=request.POST["cat_id"])
-                cat.name        = request.POST["name"]
-                cat.description = request.POST.get("description", "")
-                cat.save()
-                messages.success(request, "Category updated.")
-
-            elif action == "delete":
-                cat = get_object_or_404(Category, pk=request.POST["cat_id"])
-                cat.delete()
-                messages.success(request, "Category deleted.")
-
-        except Exception as exc:
-            messages.error(request, f"Error: {exc}")
-        return redirect("admin_panel:categories")
-
-    all_cats = Category.objects.annotate(grievance_count=Count("grievances")).order_by("name")
-    return render(request, "server/categories.html", _ctx("categories", categories=all_cats))
-
-
-def category_json(request, pk):
-    cat = get_object_or_404(Category, pk=pk)
-    return JsonResponse({"id": cat.id, "name": cat.name, "description": cat.description or ""})
-
 
 @staff_required
 def grievances(request):
@@ -647,8 +611,8 @@ def notices(request):
                     title=request.POST["title"],
                     description=request.POST["description"],
                     category=request.POST.get("category", "general"),
-                    issue_date=request.POST["issue_date"],
                     created_by=request.user,
+                    # issue_date is auto_now_add — always "now", not form-editable.
                 )
                 if "image" in request.FILES:
                     n.image = request.FILES["image"]
@@ -658,6 +622,7 @@ def notices(request):
                     f"New Notice: {n.title}",
                     body=n.description,
                     url=reverse("notice_detail", args=[n.id]),
+                    related_notice=n,
                 )
                 messages.success(request, "Notice created.")
 
@@ -666,7 +631,8 @@ def notices(request):
                 n.title       = request.POST["title"]
                 n.description = request.POST["description"]
                 n.category    = request.POST.get("category", n.category)
-                n.issue_date  = request.POST["issue_date"]
+                # issue_date is intentionally left untouched — it reflects
+                # the original publish time and can't be edited.
                 if "image" in request.FILES:
                     n.image = request.FILES["image"]
                 n.save()
@@ -674,7 +640,7 @@ def notices(request):
 
             elif action == "delete":
                 n = get_object_or_404(Notice, pk=request.POST["notice_id"])
-                n.delete()
+                n.delete()  # cascades to any Notification rows tied to this notice
                 messages.success(request, "Notice deleted.")
 
         except Exception as exc:
@@ -711,7 +677,7 @@ def jobs(request):
                     job_title=request.POST["job_title"],
                     department=request.POST["department"],
                     department_location=request.POST["department_location"],
-                    issue_date=request.POST["issue_date"],
+                    # issue_date is auto_now_add — always "now", not form-editable.
                     deadline=request.POST["deadline"],
                     job_description=request.POST["job_description"],
                     age_requirement=request.POST.get("age_requirement", ""),
@@ -725,6 +691,7 @@ def jobs(request):
                     f"New Job Listing: {j.job_title}",
                     body=f"{j.department} · Deadline: {j.deadline.strftime('%d %b %Y')}",
                     url=reverse("job_detail", args=[j.id]),
+                    related_job=j,
                 )
                 messages.success(request, "Job listing created.")
 
@@ -733,7 +700,8 @@ def jobs(request):
                 j.job_title           = request.POST["job_title"]
                 j.department          = request.POST["department"]
                 j.department_location = request.POST["department_location"]
-                j.issue_date          = request.POST["issue_date"]
+                # issue_date is intentionally left untouched — it reflects
+                # the original publish time and can't be edited.
                 j.deadline            = request.POST["deadline"]
                 j.job_description     = request.POST["job_description"]
                 j.age_requirement     = request.POST.get("age_requirement", "")
@@ -750,7 +718,7 @@ def jobs(request):
 
             elif action == "delete":
                 j = get_object_or_404(JobListing, pk=request.POST["job_id"])
-                j.delete()
+                j.delete()  # cascades to any Notification rows tied to this job
                 messages.success(request, "Job listing deleted.")
 
         except Exception as exc:
@@ -783,7 +751,6 @@ def job_json(request, pk):
 _NAV = [
     ("Dashboard", "/admin-panel/", "dashboard"),
     ("Users", "/admin-panel/users/", "users"),
-    ("Categories", "/admin-panel/categories/", "categories"),
     ("Grievances", "/admin-panel/grievances/", "grievances"),
     ("Notices", "/admin-panel/notices/", "notices"),
     ("Jobs", "/admin-panel/jobs/", "jobs"),

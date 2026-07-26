@@ -200,7 +200,7 @@ class Notice(models.Model):
     description = models.TextField()
     category    = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default="general")
     image       = models.ImageField(upload_to="notices/", null=True, blank=True)
-    issue_date  = models.DateTimeField()
+    issue_date  = models.DateTimeField(auto_now_add=True)
     created_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="notices")
     created_at  = models.DateTimeField(auto_now_add=True)
 
@@ -228,7 +228,7 @@ class JobListing(models.Model):
     job_title           = models.CharField(max_length=255)
     department          = models.CharField(max_length=150)
     department_location = models.CharField(max_length=255)
-    issue_date          = models.DateField()
+    issue_date          = models.DateField(auto_now_add=True)
     deadline            = models.DateField()
     job_description     = models.TextField()
     age_requirement     = models.CharField(max_length=100)
@@ -387,6 +387,14 @@ class Notification(models.Model):
     is_read    = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Optional links back to the source record. Set to CASCADE so that
+    # deleting a Notice/JobListing/Grievance automatically removes every
+    # notification that was generated from it — no extra cleanup code needed
+    # in the delete views.
+    related_notice    = models.ForeignKey(Notice, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications_for")
+    related_job       = models.ForeignKey(JobListing, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications_for")
+    related_grievance = models.ForeignKey(Grievance, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications_for")
+
     class Meta:
         db_table = "notifications"
         ordering = ["-created_at"]
@@ -421,7 +429,8 @@ def _notif_pref_allows(user, ntype):
     }.get(ntype, True)
 
 
-def create_notification(user, ntype, title, body="", url="#"):
+def create_notification(user, ntype, title, body="", url="#",
+                         related_notice=None, related_job=None, related_grievance=None):
     """Create a single Notification for `user`, respecting their preference
     toggle for this type. Returns the created Notification, or None if the
     user has this notification type disabled."""
@@ -429,6 +438,7 @@ def create_notification(user, ntype, title, body="", url="#"):
         return None
     return Notification.objects.create(
         user=user, type=ntype, title=title[:255], body=(body or "")[:500], url=url or "#",
+        related_notice=related_notice, related_job=related_job, related_grievance=related_grievance,
     )
 
 
@@ -458,10 +468,10 @@ def notify_grievance_status(grievance, status):
         title = f"Grievance Status: {label}"
         body = f'Your grievance "{subject}" status changed to {label}.'
 
-    return create_notification(grievance.user, "grievance", title, body, url)
+    return create_notification(grievance.user, "grievance", title, body, url, related_grievance=grievance)
 
 
-def notify_all_citizens(ntype, title, body="", url="#"):
+def notify_all_citizens(ntype, title, body="", url="#", related_notice=None, related_job=None):
     """Broadcast a notification (new notice / new job listing) to every
     active citizen who currently has this notification type enabled."""
     citizens = User.objects.filter(user_type="Citizen", is_active=True)
@@ -478,6 +488,7 @@ def notify_all_citizens(ntype, title, body="", url="#"):
         if enabled:
             to_create.append(Notification(
                 user=u, type=ntype, title=title[:255], body=(body or "")[:500], url=url or "#",
+                related_notice=related_notice, related_job=related_job,
             ))
     if to_create:
         Notification.objects.bulk_create(to_create)

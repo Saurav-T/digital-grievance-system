@@ -100,8 +100,6 @@
                         <option value="{{ value }}" {% if value == "general" %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select></div>
-                <div><label class="adm-label">Issue Date *</label>
-                    <input type="datetime-local" name="issue_date" required class="adm-input"></div>
                 <div><label class="adm-label">Description *</label>
                     <textarea name="description" rows="5" required class="adm-input resize-none"></textarea></div>
                 <div><label class="adm-label">Image <span class="text-gray-400 font-normal">(optional)</span></label>
@@ -138,8 +136,6 @@
                         <option value="{{ value }}">{{ label }}</option>
                         {% endfor %}
                     </select></div>
-                <div><label class="adm-label">Issue Date *</label>
-                    <input type="datetime-local" name="issue_date" id="en-date" required class="adm-input"></div>
                 <div><label class="adm-label">Description *</label>
                     <textarea name="description" id="en-desc" rows="5" required class="adm-input resize-none"></textarea></div>
                 <div><label class="adm-label">Replace Image <span class="text-gray-400 font-normal">(leave blank to keep)</span></label>
@@ -190,7 +186,6 @@ async function loadNoticeEdit(pk) {
     document.getElementById('en-id').value       = d.id;
     document.getElementById('en-title').value    = d.title;
     document.getElementById('en-desc').value     = d.description;
-    document.getElementById('en-date').value     = d.issue_date;
     document.getElementById('en-category').value = d.category;
     openModal('modal-edit-notice');
 }
