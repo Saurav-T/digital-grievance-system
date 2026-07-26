@@ -85,21 +85,44 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 # ---------------------------------------------------------------------------
-# Category
+# Grievance Categories
 # ---------------------------------------------------------------------------
+# Fixed government-service categories. Kept as a CharField + choices (same
+# pattern as Notice.category) rather than a separate Category table, since
+# these are predefined and don't need to be created/renamed from the admin
+# panel. Add/remove entries here and the dropdown, badges, and filters
+# everywhere in the app update automatically.
 
-class Category(models.Model):
-    name        = models.CharField(max_length=100, unique=True)
-    description = models.TextField(null=True, blank=True)
-    created_at  = models.DateTimeField(auto_now_add=True)
+GRIEVANCE_CATEGORY_STYLES = {
+    "administrative_services": ("Administrative Services",     "bg-slate-100 text-slate-700"),
+    "citizenship_passport":    ("Citizenship & Passport",      "bg-blue-100 text-blue-700"),
+    "ward_office_services":    ("Ward Office Services",        "bg-cyan-100 text-cyan-700"),
+    "municipality_services":   ("Municipality Services",       "bg-indigo-100 text-indigo-700"),
+    "roads_infrastructure":    ("Roads & Infrastructure",      "bg-amber-100 text-amber-700"),
+    "drinking_water":          ("Drinking Water",               "bg-sky-100 text-sky-700"),
+    "electricity":             ("Electricity",                  "bg-yellow-100 text-yellow-700"),
+    "health_services":         ("Health Services",              "bg-red-100 text-red-700"),
+    "education":               ("Education",                    "bg-purple-100 text-purple-700"),
+    "agriculture":             ("Agriculture",                  "bg-green-100 text-green-700"),
+    "land_revenue_survey":     ("Land Revenue & Survey",         "bg-lime-100 text-lime-700"),
+    "police_services":         ("Police Services",               "bg-gray-200 text-gray-800"),
+    "transport_management":    ("Transport Management",          "bg-orange-100 text-orange-700"),
+    "social_security":         ("Social Security Allowance",     "bg-pink-100 text-pink-700"),
+    "environment":             ("Environment",                   "bg-emerald-100 text-emerald-700"),
+    "corruption_misconduct":   ("Corruption / Misconduct",       "bg-rose-100 text-rose-700"),
+    "online_services":         ("Online Government Services",    "bg-violet-100 text-violet-700"),
+    "disaster_relief":         ("Disaster Relief",               "bg-red-200 text-red-800"),
+    "other":                   ("Other",                         "bg-gray-100 text-gray-600"),
+}
 
-    class Meta:
-        db_table           = "categories"
-        verbose_name_plural = "Categories"
-        ordering           = ["name"]
 
-    def __str__(self):
-        return self.name
+def grievance_category_meta(category):
+    """Return (label, pill_colour_classes) for a Grievance category slug,
+    falling back gracefully for unrecognised/legacy values."""
+    return GRIEVANCE_CATEGORY_STYLES.get(
+        category,
+        (category.replace("_", " ").title() or "Other", "bg-gray-100 text-gray-600"),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -119,14 +142,15 @@ class Grievance(models.Model):
         ("Resolved",  "Resolved"),
         ("Rejected",  "Rejected"),
     ]
+    CATEGORY_CHOICES = [(slug, meta[0]) for slug, meta in GRIEVANCE_CATEGORY_STYLES.items()]
 
     user            = models.ForeignKey(User, on_delete=models.CASCADE,  related_name="grievances")
-    category        = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="grievances")
+    category        = models.CharField(max_length=40, choices=CATEGORY_CHOICES, default="other")
     subject         = models.CharField(max_length=255)
     description     = models.TextField()
     priority        = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default="Medium")
     status          = models.CharField(max_length=20, choices=STATUS_CHOICES,   default="Pending")
-    location_url    = models.URLField(null=True, blank=True)
+    location_url    = models.CharField(max_length=255, null=True, blank=True)  # stores "lat, lng"
     attachment      = models.ImageField(upload_to="grievances/", null=True, blank=True)
     is_spam         = models.BooleanField(default=False)
     spam_score      = models.FloatField(default=0.0)
@@ -142,6 +166,14 @@ class Grievance(models.Model):
 
     def __str__(self):
         return self.subject
+
+    @property
+    def category_label(self):
+        return grievance_category_meta(self.category)[0]
+
+    @property
+    def category_colour(self):
+        return grievance_category_meta(self.category)[1]
 
     @property
     def priority_colour(self):
@@ -200,7 +232,7 @@ class Notice(models.Model):
     description = models.TextField()
     category    = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default="general")
     image       = models.ImageField(upload_to="notices/", null=True, blank=True)
-    issue_date  = models.DateTimeField()
+    issue_date  = models.DateTimeField(auto_now_add=True)
     created_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="notices")
     created_at  = models.DateTimeField(auto_now_add=True)
 
@@ -228,7 +260,7 @@ class JobListing(models.Model):
     job_title           = models.CharField(max_length=255)
     department          = models.CharField(max_length=150)
     department_location = models.CharField(max_length=255)
-    issue_date          = models.DateField()
+    issue_date          = models.DateField(auto_now_add=True)
     deadline            = models.DateField()
     job_description     = models.TextField()
     age_requirement     = models.CharField(max_length=100)
@@ -387,6 +419,14 @@ class Notification(models.Model):
     is_read    = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Optional links back to the source record. Set to CASCADE so that
+    # deleting a Notice/JobListing/Grievance automatically removes every
+    # notification that was generated from it — no extra cleanup code needed
+    # in the delete views.
+    related_notice    = models.ForeignKey(Notice, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications_for")
+    related_job       = models.ForeignKey(JobListing, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications_for")
+    related_grievance = models.ForeignKey(Grievance, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications_for")
+
     class Meta:
         db_table = "notifications"
         ordering = ["-created_at"]
@@ -409,7 +449,7 @@ GRIEVANCE_STATUS_LABELS = {
 
 
 def _notif_pref_allows(user, ntype):
-    """Return True if `user` currently has this notification type enabled
+    """Return True if user currently has this notification type enabled
     (defaults to True if no preference row exists yet)."""
     pref = NotificationPreference.objects.filter(user=user).first()
     if not pref:
@@ -421,19 +461,21 @@ def _notif_pref_allows(user, ntype):
     }.get(ntype, True)
 
 
-def create_notification(user, ntype, title, body="", url="#"):
-    """Create a single Notification for `user`, respecting their preference
+def create_notification(user, ntype, title, body="", url="#",
+                         related_notice=None, related_job=None, related_grievance=None):
+    """Create a single Notification for user, respecting their preference
     toggle for this type. Returns the created Notification, or None if the
     user has this notification type disabled."""
     if not _notif_pref_allows(user, ntype):
         return None
     return Notification.objects.create(
         user=user, type=ntype, title=title[:255], body=(body or "")[:500], url=url or "#",
+        related_notice=related_notice, related_job=related_job, related_grievance=related_grievance,
     )
 
 
 def notify_grievance_status(grievance, status):
-    """Notify a grievance's owner that its status is now `status`
+    """Notify a grievance's owner that its status is now status
     (one of Grievance.STATUS_CHOICES), respecting their preference."""
     from django.urls import reverse
     label = GRIEVANCE_STATUS_LABELS.get(status, status)
@@ -458,10 +500,10 @@ def notify_grievance_status(grievance, status):
         title = f"Grievance Status: {label}"
         body = f'Your grievance "{subject}" status changed to {label}.'
 
-    return create_notification(grievance.user, "grievance", title, body, url)
+    return create_notification(grievance.user, "grievance", title, body, url, related_grievance=grievance)
 
 
-def notify_all_citizens(ntype, title, body="", url="#"):
+def notify_all_citizens(ntype, title, body="", url="#", related_notice=None, related_job=None):
     """Broadcast a notification (new notice / new job listing) to every
     active citizen who currently has this notification type enabled."""
     citizens = User.objects.filter(user_type="Citizen", is_active=True)
@@ -478,6 +520,7 @@ def notify_all_citizens(ntype, title, body="", url="#"):
         if enabled:
             to_create.append(Notification(
                 user=u, type=ntype, title=title[:255], body=(body or "")[:500], url=url or "#",
+                related_notice=related_notice, related_job=related_job,
             ))
     if to_create:
         Notification.objects.bulk_create(to_create)

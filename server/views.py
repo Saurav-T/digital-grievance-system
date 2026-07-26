@@ -1,7 +1,7 @@
 import io
 import json
 import os
-from datetime import timedelta
+from datetime import datetime
 from functools import wraps
 
 from django.contrib import messages
@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from client.models import (
-    Category, Grievance, GrievanceStatusHistory, JobListing, Notice, User,
+    Grievance, GrievanceStatusHistory, JobListing, Notice, User,
     notify_grievance_status, notify_all_citizens,
 )
 
@@ -96,8 +96,10 @@ def dashboard(request):
         carousel_images = []
 
     # ── Recent tables ─────────────────────────────────────────────────────────
+    # NOTE: Grievance.category is now a plain CharField (see client/models.py),
+    # not a FK, so it no longer needs — or supports — select_related("category").
     recent_grievances = (
-        Grievance.objects.select_related("user", "category").order_by("-created_at")[:5]
+        Grievance.objects.select_related("user").order_by("-created_at")[:5]
     )
     latest_notices = Notice.objects.order_by("-created_at")[:3]
 
@@ -409,42 +411,6 @@ def user_json(request, pk):
     })
 
 
-@staff_required
-def categories(request):
-    if request.method == "POST":
-        action = request.POST.get("action")
-        try:
-            if action == "add":
-                Category.objects.create(
-                    name=request.POST["name"],
-                    description=request.POST.get("description", ""),
-                )
-                messages.success(request, "Category created.")
-
-            elif action == "edit":
-                cat = get_object_or_404(Category, pk=request.POST["cat_id"])
-                cat.name        = request.POST["name"]
-                cat.description = request.POST.get("description", "")
-                cat.save()
-                messages.success(request, "Category updated.")
-
-            elif action == "delete":
-                cat = get_object_or_404(Category, pk=request.POST["cat_id"])
-                cat.delete()
-                messages.success(request, "Category deleted.")
-
-        except Exception as exc:
-            messages.error(request, f"Error: {exc}")
-        return redirect("admin_panel:categories")
-
-    all_cats = Category.objects.annotate(grievance_count=Count("grievances")).order_by("name")
-    return render(request, "server/categories.html", _ctx("categories", categories=all_cats))
-
-
-def category_json(request, pk):
-    cat = get_object_or_404(Category, pk=pk)
-    return JsonResponse({"id": cat.id, "name": cat.name, "description": cat.description or ""})
-
 
 @staff_required
 def grievances(request):
@@ -481,8 +447,14 @@ def grievances(request):
                 grievance.subject     = request.POST["subject"]
                 grievance.description = request.POST["description"]
                 grievance.priority    = request.POST["priority"]
-                cat_id = request.POST.get("category")
-                grievance.category    = Category.objects.filter(pk=cat_id).first() if cat_id else None
+
+                # category is now a CharField slug (e.g. "roads_infrastructure"),
+                # matching Grievance.CATEGORY_CHOICES — no more Category FK lookup.
+                cat_raw = request.POST.get("category", "")
+                valid_categories = dict(Grievance.CATEGORY_CHOICES)
+                if cat_raw in valid_categories:
+                    grievance.category = cat_raw
+
                 old_status = grievance.status
                 new_status = request.POST.get("status", old_status)
                 if new_status != old_status:
@@ -508,35 +480,40 @@ def grievances(request):
             messages.error(request, f"Error: {exc}")
         return redirect("admin_panel:grievances")
 
-    qs = (Grievance.objects
-          .select_related("user", "category")
-          .order_by("-created_at"))
+    # category is a CharField now, so select_related("category") is gone.
+    qs = Grievance.objects.select_related("user").order_by("-created_at")
 
     status_filter   = request.GET.get("status", "")
     priority_filter = request.GET.get("priority", "")
+    category_filter = request.GET.get("category", "")
     if status_filter:
         qs = qs.filter(status=status_filter)
     if priority_filter:
         qs = qs.filter(priority=priority_filter)
+    if category_filter:
+        qs = qs.filter(category=category_filter)
 
     return render(request, "server/grievances.html", _ctx(
         "grievances",
         grievances=qs,
-        categories=Category.objects.all(),
+        categories=Grievance.CATEGORY_CHOICES,
         status_choices=Grievance.STATUS_CHOICES,
         priority_choices=Grievance.PRIORITY_CHOICES,
         status_filter=status_filter,
         priority_filter=priority_filter,
+        category_filter=category_filter,
     ))
 
 
 def grievance_json(request, pk):
-    g = get_object_or_404(Grievance.objects.select_related("user", "category"), pk=pk)
+    g = get_object_or_404(Grievance.objects.select_related("user"), pk=pk)
     history = g.status_history.select_related("updated_by").order_by("updated_at")
     return JsonResponse({
         "id": g.id, "subject": g.subject, "description": g.description,
         "user": g.user.get_full_name(), "user_email": g.user.email,
-        "category": g.category.name if g.category else "—",
+        "category": g.category,
+        "category_label": g.category_label,
+        "category_colour": g.category_colour,
         "priority": g.priority, "priority_colour": g.priority_colour,
         "status": g.status, "status_colour": g.status_colour,
         "location_url": g.location_url or "",
@@ -569,7 +546,7 @@ def grievance_pdf(request, pk):
         messages.error(request, "PDF requires: pip install reportlab")
         return redirect("admin_panel:grievances")
 
-    g = get_object_or_404(Grievance.objects.select_related("user", "category"), pk=pk)
+    g = get_object_or_404(Grievance.objects.select_related("user"), pk=pk)
     history = g.status_history.select_related("updated_by").order_by("updated_at")
 
     buf = io.BytesIO()
@@ -587,7 +564,7 @@ def grievance_pdf(request, pk):
     meta = [
         ["Subject", g.subject],
         ["Submitted By", g.user.get_full_name() + f" ({g.user.email})"],
-        ["Category", g.category.name if g.category else "—"],
+        ["Category", g.category_label],
         ["Priority", g.priority],
         ["Status", g.status],
         ["Date Filed", g.created_at.strftime("%d %b %Y, %I:%M %p")],
@@ -647,8 +624,8 @@ def notices(request):
                     title=request.POST["title"],
                     description=request.POST["description"],
                     category=request.POST.get("category", "general"),
-                    issue_date=request.POST["issue_date"],
                     created_by=request.user,
+                    # issue_date is auto_now_add — always "now", not form-editable.
                 )
                 if "image" in request.FILES:
                     n.image = request.FILES["image"]
@@ -658,6 +635,7 @@ def notices(request):
                     f"New Notice: {n.title}",
                     body=n.description,
                     url=reverse("notice_detail", args=[n.id]),
+                    related_notice=n,
                 )
                 messages.success(request, "Notice created.")
 
@@ -666,7 +644,8 @@ def notices(request):
                 n.title       = request.POST["title"]
                 n.description = request.POST["description"]
                 n.category    = request.POST.get("category", n.category)
-                n.issue_date  = request.POST["issue_date"]
+                # issue_date is intentionally left untouched — it reflects
+                # the original publish time and can't be edited.
                 if "image" in request.FILES:
                     n.image = request.FILES["image"]
                 n.save()
@@ -674,7 +653,7 @@ def notices(request):
 
             elif action == "delete":
                 n = get_object_or_404(Notice, pk=request.POST["notice_id"])
-                n.delete()
+                n.delete()  # cascades to any Notification rows tied to this notice
                 messages.success(request, "Notice deleted.")
 
         except Exception as exc:
@@ -707,12 +686,19 @@ def jobs(request):
         action = request.POST.get("action")
         try:
             if action == "add":
+                # Browser <input type="date"> always posts YYYY-MM-DD as a string
+                deadline_raw = request.POST["deadline"]
+                if isinstance(deadline_raw, str):
+                    deadline = datetime.strptime(deadline_raw.strip(), "%Y-%m-%d").date()
+                else:
+                    deadline = deadline_raw
+
                 j = JobListing.objects.create(
                     job_title=request.POST["job_title"],
                     department=request.POST["department"],
                     department_location=request.POST["department_location"],
-                    issue_date=request.POST["issue_date"],
-                    deadline=request.POST["deadline"],
+                    # issue_date is auto_now_add — always "now"
+                    deadline=deadline,
                     job_description=request.POST["job_description"],
                     age_requirement=request.POST.get("age_requirement", ""),
                     job_requirements=request.POST["job_requirements"],
@@ -725,6 +711,7 @@ def jobs(request):
                     f"New Job Listing: {j.job_title}",
                     body=f"{j.department} · Deadline: {j.deadline.strftime('%d %b %Y')}",
                     url=reverse("job_detail", args=[j.id]),
+                    related_job=j,
                 )
                 messages.success(request, "Job listing created.")
 
@@ -733,12 +720,17 @@ def jobs(request):
                 j.job_title           = request.POST["job_title"]
                 j.department          = request.POST["department"]
                 j.department_location = request.POST["department_location"]
-                j.issue_date          = request.POST["issue_date"]
-                j.deadline            = request.POST["deadline"]
+                # issue_date is intentionally left untouched — it reflects
+                # the original publish time and can't be edited.
                 j.job_description     = request.POST["job_description"]
                 j.age_requirement     = request.POST.get("age_requirement", "")
                 j.job_requirements    = request.POST["job_requirements"]
                 j.contact_information = request.POST["contact_information"]
+                deadline_raw = request.POST["deadline"]
+                if isinstance(deadline_raw, str):
+                    j.deadline = datetime.strptime(deadline_raw.strip(), "%Y-%m-%d").date()
+                else:
+                    j.deadline = deadline_raw
                 j.save()
                 messages.success(request, "Job listing updated.")
 
@@ -750,7 +742,7 @@ def jobs(request):
 
             elif action == "delete":
                 j = get_object_or_404(JobListing, pk=request.POST["job_id"])
-                j.delete()
+                j.delete()  # cascades to any Notification rows tied to this job
                 messages.success(request, "Job listing deleted.")
 
         except Exception as exc:
@@ -783,7 +775,6 @@ def job_json(request, pk):
 _NAV = [
     ("Dashboard", "/admin-panel/", "dashboard"),
     ("Users", "/admin-panel/users/", "users"),
-    ("Categories", "/admin-panel/categories/", "categories"),
     ("Grievances", "/admin-panel/grievances/", "grievances"),
     ("Notices", "/admin-panel/notices/", "notices"),
     ("Jobs", "/admin-panel/jobs/", "jobs"),

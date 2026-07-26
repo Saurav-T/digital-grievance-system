@@ -6,132 +6,154 @@
 {% block content %}
 
 <!-- ═══════════════════════════════════════════════════════════
-     USERS SECTION  (visible to all admin-panel staff)
+     TAB SWITCHER
 ════════════════════════════════════════════════════════════ -->
-<div class="flex items-center justify-between mb-4">
-    <div>
-        <h1 class="text-2xl font-bold">Users</h1>
-        <p class="text-sm text-gray-500 mt-0.5">Citizens registered on the public portal.</p>
-    </div>
-    <button onclick="openModal('modal-add-user')"
-            class="bg-brand-blue text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors">
-        + Add User
-    </button>
+<div class="border-b border-gray-200 mb-6">
+    <nav class="flex gap-6" aria-label="Tabs">
+        <button type="button" onclick="switchUserTab('users')" id="tab-btn-users"
+                class="tab-btn border-b-2 border-brand-blue text-brand-blue font-semibold px-1 py-3 text-sm transition-colors">
+            Users
+        </button>
+        {% if request.user.is_superuser %}
+        <button type="button" onclick="switchUserTab('admins')" id="tab-btn-admins"
+                class="tab-btn border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold px-1 py-3 text-sm transition-colors">
+            Administrators
+        </button>
+        {% endif %}
+    </nav>
 </div>
 
-<div class="bg-white rounded-xl shadow-sm border overflow-hidden mb-10">
-    <div class="p-4 border-b bg-gray-50">
-        <div class="relative max-w-xs">
-            <svg class="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            <input type="text" id="search-users" oninput="filterTable('search-users','table-users-body')"
-                   placeholder="Search users by name, username, email or phone…"
-                   class="adm-input pl-9 text-sm">
+<!-- ═══════════════════════════════════════════════════════════
+     USERS PANEL  (visible to all admin-panel staff)
+════════════════════════════════════════════════════════════ -->
+<div id="tab-panel-users">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-2xl font-bold">Users</h1>
+            <p class="text-sm text-gray-500 mt-0.5">Citizens registered on the public portal.</p>
         </div>
+        <button onclick="openModal('modal-add-user')"
+                class="bg-brand-blue text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors">
+            + Add User
+        </button>
     </div>
-    <div class="overflow-x-auto">
-        <table class="w-full admin-table">
-            <thead><tr>
-                <th>ID</th><th>Name</th><th>Username</th><th>Email</th><th>Phone</th>
-                <th>Status</th><th>Joined</th><th>Actions</th>
-            </tr></thead>
-            <tbody id="table-users-body">
-                {% for u in users %}
-                <tr>
-                    <td class="font-mono text-xs text-gray-400">#{{ u.id }}</td>
-                    <td class="font-medium">{{ u.get_full_name }}</td>
-                    <td class="text-gray-500 text-xs">{{ u.username|default:"—" }}</td>
-                    <td class="text-gray-600">{{ u.email }}</td>
-                    <td>{{ u.phone_number|default:"—" }}</td>
-                    <td>
-                        {% if u.is_active %}<span class="badge bg-green-100 text-green-700">Active</span>
-                        {% else %}<span class="badge bg-red-100 text-red-700">Inactive</span>{% endif %}
-                    </td>
-                    <td class="whitespace-nowrap text-xs text-gray-500">{{ u.date_joined|date:"d M Y" }}</td>
-                    <td>
-                        <div class="flex flex-wrap gap-1">
-                            <button onclick="loadEdit('/admin-panel/users/{{ u.id }}/json/', 'modal-edit-user', {first_name:'eu-fn',last_name:'eu-ln',username:'eu-username',email:'eu-em',phone_number:'eu-ph',is_active:'eu-active'}); document.getElementById('eu-id').value='{{ u.id }}'"
-                                    class="act-btn bg-yellow-50 text-yellow-700 hover:bg-yellow-100">Edit</button>
-                            <button onclick="confirmDelete('modal-delete-user','{{ u.id }}','du-id')"
-                                    class="act-btn bg-red-50 text-red-700 hover:bg-red-100">Delete</button>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="8" class="text-center py-10 text-gray-400">No users found.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <p id="no-results-users" class="hidden text-center py-8 text-sm text-gray-400">No matching users.</p>
+
+    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div class="p-4 border-b bg-gray-50">
+            <div class="relative max-w-xs">
+                <svg class="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="text" id="search-users" oninput="filterTable('search-users','table-users-body')"
+                       placeholder="Search users by name, username, email or phone…"
+                       class="adm-input pl-9 text-sm">
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full admin-table">
+                <thead><tr>
+                    <th>ID</th><th>Name</th><th>Username</th><th>Email</th><th>Phone</th>
+                    <th>Status</th><th>Joined</th><th>Actions</th>
+                </tr></thead>
+                <tbody id="table-users-body">
+                    {% for u in users %}
+                    <tr>
+                        <td class="font-mono text-xs text-gray-400">#{{ u.id }}</td>
+                        <td class="font-medium">{{ u.get_full_name }}</td>
+                        <td class="text-gray-500 text-xs">{{ u.username|default:"—" }}</td>
+                        <td class="text-gray-600">{{ u.email }}</td>
+                        <td>{{ u.phone_number|default:"—" }}</td>
+                        <td>
+                            {% if u.is_active %}<span class="badge bg-green-100 text-green-700">Active</span>
+                            {% else %}<span class="badge bg-red-100 text-red-700">Inactive</span>{% endif %}
+                        </td>
+                        <td class="whitespace-nowrap text-xs text-gray-500">{{ u.date_joined|date:"d M Y" }}</td>
+                        <td class="whitespace-nowrap">
+                            <div class="flex items-center gap-1 whitespace-nowrap">
+                                <button onclick="loadEdit('/admin-panel/users/{{ u.id }}/json/', 'modal-edit-user', {first_name:'eu-fn',last_name:'eu-ln',username:'eu-username',email:'eu-em',phone_number:'eu-ph',is_active:'eu-active'}); document.getElementById('eu-id').value='{{ u.id }}'"
+                                        class="act-btn bg-yellow-50 text-yellow-700 hover:bg-yellow-100">Edit</button>
+                                <button onclick="confirmDelete('modal-delete-user','{{ u.id }}','du-id')"
+                                        class="act-btn bg-red-50 text-red-700 hover:bg-red-100">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center py-10 text-gray-400">No users found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <p id="no-results-users" class="hidden text-center py-8 text-sm text-gray-400">No matching users.</p>
+        </div>
     </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
-     ADMINISTRATORS SECTION  (superuser only)
+     ADMINISTRATORS PANEL  (superuser only)
 ════════════════════════════════════════════════════════════ -->
 {% if request.user.is_superuser %}
-<div class="flex items-center justify-between mb-4">
-    <div>
-        <h1 class="text-2xl font-bold">Administrators</h1>
-        <p class="text-sm text-gray-500 mt-0.5">Staff accounts with access to the admin panel. Superuser only.</p>
-    </div>
-    <button onclick="openModal('modal-add-admin')"
-            class="bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-purple-800 transition-colors">
-        + Add Admin
-    </button>
-</div>
-
-<div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-    <div class="p-4 border-b bg-gray-50">
-        <div class="relative max-w-xs">
-            <svg class="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            <input type="text" id="search-admins" oninput="filterTable('search-admins','table-admins-body')"
-                   placeholder="Search admins by name, email or phone…"
-                   class="adm-input pl-9 text-sm">
+<div id="tab-panel-admins" class="hidden">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-2xl font-bold">Administrators</h1>
+            <p class="text-sm text-gray-500 mt-0.5">Staff accounts with access to the admin panel. Superuser only.</p>
         </div>
+        <button onclick="openModal('modal-add-admin')"
+                class="bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-purple-800 transition-colors">
+            + Add Admin
+        </button>
     </div>
-    <div class="overflow-x-auto">
-        <table class="w-full admin-table">
-            <thead><tr>
-                <th>ID</th><th>Name</th><th>Email</th><th>Phone</th>
-                <th>Role</th><th>Status</th><th>Joined</th><th>Actions</th>
-            </tr></thead>
-            <tbody id="table-admins-body">
-                {% for a in admins %}
-                <tr>
-                    <td class="font-mono text-xs text-gray-400">#{{ a.id }}</td>
-                    <td class="font-medium">{{ a.get_full_name }}</td>
-                    <td class="text-gray-600">{{ a.email }}</td>
-                    <td>{{ a.phone_number|default:"—" }}</td>
-                    <td>
-                        {% if a.is_superuser %}<span class="badge bg-purple-100 text-purple-700">Superuser</span>
-                        {% else %}<span class="badge bg-blue-100 text-blue-700">Staff</span>{% endif %}
-                    </td>
-                    <td>
-                        {% if a.is_active %}<span class="badge bg-green-100 text-green-700">Active</span>
-                        {% else %}<span class="badge bg-red-100 text-red-700">Inactive</span>{% endif %}
-                    </td>
-                    <td class="whitespace-nowrap text-xs text-gray-500">{{ a.date_joined|date:"d M Y" }}</td>
-                    <td>
-                        <div class="flex flex-wrap gap-1">
-                            <button onclick="loadEdit('/admin-panel/users/{{ a.id }}/json/', 'modal-edit-admin', {first_name:'ea-fn',last_name:'ea-ln',email:'ea-em',phone_number:'ea-ph',is_superuser:'ea-super',is_active:'ea-active'}); document.getElementById('ea-id').value='{{ a.id }}'"
-                                    class="act-btn bg-yellow-50 text-yellow-700 hover:bg-yellow-100">Edit</button>
-                            {% if a.id != request.user.id %}
-                            <button onclick="confirmDelete('modal-delete-admin','{{ a.id }}','da-id')"
-                                    class="act-btn bg-red-50 text-red-700 hover:bg-red-100">Delete</button>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="8" class="text-center py-10 text-gray-400">No administrators found.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <p id="no-results-admins" class="hidden text-center py-8 text-sm text-gray-400">No matching administrators.</p>
+
+    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div class="p-4 border-b bg-gray-50">
+            <div class="relative max-w-xs">
+                <svg class="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="text" id="search-admins" oninput="filterTable('search-admins','table-admins-body')"
+                       placeholder="Search admins by name, email or phone…"
+                       class="adm-input pl-9 text-sm">
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full admin-table">
+                <thead><tr>
+                    <th>ID</th><th>Name</th><th>Email</th><th>Phone</th>
+                    <th>Role</th><th>Status</th><th>Joined</th><th>Actions</th>
+                </tr></thead>
+                <tbody id="table-admins-body">
+                    {% for a in admins %}
+                    <tr>
+                        <td class="font-mono text-xs text-gray-400">#{{ a.id }}</td>
+                        <td class="font-medium">{{ a.get_full_name }}</td>
+                        <td class="text-gray-600">{{ a.email }}</td>
+                        <td>{{ a.phone_number|default:"—" }}</td>
+                        <td>
+                            {% if a.is_superuser %}<span class="badge bg-purple-100 text-purple-700">Superuser</span>
+                            {% else %}<span class="badge bg-blue-100 text-blue-700">Staff</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if a.is_active %}<span class="badge bg-green-100 text-green-700">Active</span>
+                            {% else %}<span class="badge bg-red-100 text-red-700">Inactive</span>{% endif %}
+                        </td>
+                        <td class="whitespace-nowrap text-xs text-gray-500">{{ a.date_joined|date:"d M Y" }}</td>
+                        <td class="whitespace-nowrap">
+                            <div class="flex items-center gap-1 whitespace-nowrap">
+                                <button onclick="loadEdit('/admin-panel/users/{{ a.id }}/json/', 'modal-edit-admin', {first_name:'ea-fn',last_name:'ea-ln',email:'ea-em',phone_number:'ea-ph',is_superuser:'ea-super',is_active:'ea-active'}); document.getElementById('ea-id').value='{{ a.id }}'"
+                                        class="act-btn bg-yellow-50 text-yellow-700 hover:bg-yellow-100">Edit</button>
+                                {% if a.id != request.user.id %}
+                                <button onclick="confirmDelete('modal-delete-admin','{{ a.id }}','da-id')"
+                                        class="act-btn bg-red-50 text-red-700 hover:bg-red-100">Delete</button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center py-10 text-gray-400">No administrators found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <p id="no-results-admins" class="hidden text-center py-8 text-sm text-gray-400">No matching administrators.</p>
+        </div>
     </div>
 </div>
 {% endif %}
@@ -356,6 +378,30 @@
 {% endif %}
 
 <script>
+// ── Tab switcher: Users / Administrators ─────────────────────────────
+function switchUserTab(tab) {
+    var panels = {
+        users: document.getElementById('tab-panel-users'),
+        admins: document.getElementById('tab-panel-admins')
+    };
+    var btns = {
+        users: document.getElementById('tab-btn-users'),
+        admins: document.getElementById('tab-btn-admins')
+    };
+    Object.keys(panels).forEach(function (key) {
+        if (!panels[key]) return;
+        panels[key].classList.toggle('hidden', key !== tab);
+        if (!btns[key]) return;
+        if (key === tab) {
+            btns[key].classList.add('border-brand-blue', 'text-brand-blue');
+            btns[key].classList.remove('border-transparent', 'text-gray-500');
+        } else {
+            btns[key].classList.remove('border-brand-blue', 'text-brand-blue');
+            btns[key].classList.add('border-transparent', 'text-gray-500');
+        }
+    });
+}
+
 // ── Client-side table search (name / username / email / phone) ─────────
 function filterTable(inputId, tbodyId) {
     var q = document.getElementById(inputId).value.trim().toLowerCase();

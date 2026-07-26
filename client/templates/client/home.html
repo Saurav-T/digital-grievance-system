@@ -27,13 +27,17 @@
         </a>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
+     <div class="max-h-[34rem] overflow-y-auto pr-2">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
         {% for notice in notices %}
-          {% include "client/partials/home/notice_card.html" with notice=notice %}
+            {% include "client/partials/home/notice_card.html" with notice=notice %}
         {% empty %}
-          <p class="text-sm text-gray-500 col-span-2">No notices published yet.</p>
+            <p class="text-sm text-gray-500 col-span-2">
+                No notices published yet.
+            </p>
         {% endfor %}
-      </div>
+    </div>
+</div>
     </div>
 
     <!-- ── Job Listings ──────────────────────────────────── -->
@@ -52,7 +56,7 @@
         </a>
       </div>
 
-      <div class="space-y-3 max-h-80 overflow-y-auto pr-1">
+      <div class="space-y-3 max-h-[14rem] overflow-y-auto pr-1 job-list-scroll">
         {% for job in jobs %}
           {% include "client/partials/home/job_card.html" with job=job %}
         {% empty %}
