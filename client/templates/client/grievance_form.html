@@ -148,11 +148,9 @@
               <div>
                 <label for="category" class="griev-label">Category</label>
                 <select id="category" name="category" class="griev-input">
-                  <option value="infrastructure" selected>Infrastructure</option>
-                  <option value="sanitation">Sanitation</option>
-                  <option value="safety">Safety</option>
-                  <option value="noise">Noise</option>
-                  <option value="other">Other</option>
+                  {% for value, label in category_choices %}
+                  <option value="{{ value }}" {% if value == "other" %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
                 </select>
               </div>
 

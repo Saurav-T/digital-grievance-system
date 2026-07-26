@@ -14,7 +14,6 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.http import require_POST
 
 from .models import (
-    Category,
     Grievance,
     GrievanceStatusHistory,
     JobListing,
@@ -379,22 +378,29 @@ def grievances(request):
     """
     GET  -> render the grievance submission form.
     POST -> create a new Grievance for the logged-in user.
+
+    NOTE: `category` is now a plain CharField driven by
+    Grievance.CATEGORY_CHOICES / GRIEVANCE_CATEGORY_STYLES (see models.py),
+    matching the Notice.category pattern. The old Category FK + get_or_create
+    lookup has been removed — categories are fixed government-service slugs,
+    not freeform admin-created rows.
     """
     if request.method == "POST":
         subject = request.POST.get("subject", "").strip()
         description = request.POST.get("description", "").strip()
         priority_raw = request.POST.get("priority", "medium").capitalize()
-        category_raw = request.POST.get("category", "other").replace("_", " ").title()
+        category_raw = request.POST.get("category", "other").strip()
         coordinates = request.POST.get("coordinates", "").strip()
 
         if not subject or not description:
             messages.error(request, "Please provide both a subject and a description.")
-            return redirect("grievance_create")
+            return redirect("grievances")
 
         valid_priorities = dict(Grievance.PRIORITY_CHOICES)
         priority = priority_raw if priority_raw in valid_priorities else "Medium"
 
-        category, _ = Category.objects.get_or_create(name=category_raw)
+        valid_categories = dict(Grievance.CATEGORY_CHOICES)
+        category = category_raw if category_raw in valid_categories else "other"
 
         grievance = Grievance.objects.create(
             user=request.user,
@@ -421,22 +427,21 @@ def grievances(request):
         messages.success(request, "Your grievance has been submitted successfully.")
         return redirect("track_grievance")
 
-    return render(request, "client/grievance_form.html")
+    return render(request, "client/grievance_form.html", {
+        "category_choices": Grievance.CATEGORY_CHOICES,
+    })
 
 
 @login_required(login_url="login")
 def track_grievance(request):
-    qs = (
-        Grievance.objects.filter(user=request.user)
-        .select_related("category")
-        .order_by("-created_at")
-    )
+    qs = Grievance.objects.filter(user=request.user).order_by("-created_at")
 
     q = request.GET.get("q", "").strip()
     status_filter = request.GET.get("filter", "")
+    category_filter = request.GET.get("category", "")
 
     if q:
-        qs = qs.filter(Q(subject__icontains=q) | Q(category__name__icontains=q))
+        qs = qs.filter(subject__icontains=q)
 
     if status_filter:
         status_map = {
@@ -447,13 +452,19 @@ def track_grievance(request):
         }
         qs = qs.filter(status=status_map.get(status_filter, status_filter))
 
-    return render(request, "client/track_grievance.html", {"grievances": qs})
+    if category_filter:
+        qs = qs.filter(category=category_filter)
+
+    return render(request, "client/track_grievance.html", {
+        "grievances": qs,
+        "category_choices": Grievance.CATEGORY_CHOICES,
+    })
 
 
 @login_required(login_url="login")
 def grievance_detail(request, pk):
     grievance = get_object_or_404(
-        Grievance.objects.select_related("user", "category"),
+        Grievance.objects.select_related("user"),
         pk=pk,
         user=request.user,
     )
@@ -674,17 +685,24 @@ def profile(request):
         notice_series.append(notice_map.get(key, 0))
 
     # ── Category analytics (top 3) ───────────────────────────────────────
+    # `category` is now a CharField slug (e.g. "roads_infrastructure"), so
+    # we group on it directly and resolve the display label via
+    # grievance_category_meta rather than a related Category name.
+    from .models import grievance_category_meta
+
     cat_qs = (
         grievances_qs.exclude(category__isnull=True)
-        .values("category__name")
+        .exclude(category="")
+        .values("category")
         .annotate(count=Count("id"))
         .order_by("-count")[:3]
     )
     category_analytics = []
     if total_grievances:
         for c in cat_qs:
+            label = grievance_category_meta(c["category"])[0]
             category_analytics.append({
-                "label": c["category__name"],
+                "label": label,
                 "pct": round((c["count"] / total_grievances) * 100),
             })
 

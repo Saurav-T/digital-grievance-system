@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from client.models import (
-    Category, Grievance, GrievanceStatusHistory, JobListing, Notice, User,
+    Grievance, GrievanceStatusHistory, JobListing, Notice, User,
     notify_grievance_status, notify_all_citizens,
 )
 
@@ -96,8 +96,10 @@ def dashboard(request):
         carousel_images = []
 
     # ── Recent tables ─────────────────────────────────────────────────────────
+    # NOTE: Grievance.category is now a plain CharField (see client/models.py),
+    # not a FK, so it no longer needs — or supports — select_related("category").
     recent_grievances = (
-        Grievance.objects.select_related("user", "category").order_by("-created_at")[:5]
+        Grievance.objects.select_related("user").order_by("-created_at")[:5]
     )
     latest_notices = Notice.objects.order_by("-created_at")[:3]
 
@@ -445,8 +447,14 @@ def grievances(request):
                 grievance.subject     = request.POST["subject"]
                 grievance.description = request.POST["description"]
                 grievance.priority    = request.POST["priority"]
-                cat_id = request.POST.get("category")
-                grievance.category    = Category.objects.filter(pk=cat_id).first() if cat_id else None
+
+                # category is now a CharField slug (e.g. "roads_infrastructure"),
+                # matching Grievance.CATEGORY_CHOICES — no more Category FK lookup.
+                cat_raw = request.POST.get("category", "")
+                valid_categories = dict(Grievance.CATEGORY_CHOICES)
+                if cat_raw in valid_categories:
+                    grievance.category = cat_raw
+
                 old_status = grievance.status
                 new_status = request.POST.get("status", old_status)
                 if new_status != old_status:
@@ -472,35 +480,40 @@ def grievances(request):
             messages.error(request, f"Error: {exc}")
         return redirect("admin_panel:grievances")
 
-    qs = (Grievance.objects
-          .select_related("user", "category")
-          .order_by("-created_at"))
+    # category is a CharField now, so select_related("category") is gone.
+    qs = Grievance.objects.select_related("user").order_by("-created_at")
 
     status_filter   = request.GET.get("status", "")
     priority_filter = request.GET.get("priority", "")
+    category_filter = request.GET.get("category", "")
     if status_filter:
         qs = qs.filter(status=status_filter)
     if priority_filter:
         qs = qs.filter(priority=priority_filter)
+    if category_filter:
+        qs = qs.filter(category=category_filter)
 
     return render(request, "server/grievances.html", _ctx(
         "grievances",
         grievances=qs,
-        categories=Category.objects.all(),
+        categories=Grievance.CATEGORY_CHOICES,
         status_choices=Grievance.STATUS_CHOICES,
         priority_choices=Grievance.PRIORITY_CHOICES,
         status_filter=status_filter,
         priority_filter=priority_filter,
+        category_filter=category_filter,
     ))
 
 
 def grievance_json(request, pk):
-    g = get_object_or_404(Grievance.objects.select_related("user", "category"), pk=pk)
+    g = get_object_or_404(Grievance.objects.select_related("user"), pk=pk)
     history = g.status_history.select_related("updated_by").order_by("updated_at")
     return JsonResponse({
         "id": g.id, "subject": g.subject, "description": g.description,
         "user": g.user.get_full_name(), "user_email": g.user.email,
-        "category": g.category.name if g.category else "—",
+        "category": g.category,
+        "category_label": g.category_label,
+        "category_colour": g.category_colour,
         "priority": g.priority, "priority_colour": g.priority_colour,
         "status": g.status, "status_colour": g.status_colour,
         "location_url": g.location_url or "",
@@ -533,7 +546,7 @@ def grievance_pdf(request, pk):
         messages.error(request, "PDF requires: pip install reportlab")
         return redirect("admin_panel:grievances")
 
-    g = get_object_or_404(Grievance.objects.select_related("user", "category"), pk=pk)
+    g = get_object_or_404(Grievance.objects.select_related("user"), pk=pk)
     history = g.status_history.select_related("updated_by").order_by("updated_at")
 
     buf = io.BytesIO()
@@ -551,7 +564,7 @@ def grievance_pdf(request, pk):
     meta = [
         ["Subject", g.subject],
         ["Submitted By", g.user.get_full_name() + f" ({g.user.email})"],
-        ["Category", g.category.name if g.category else "—"],
+        ["Category", g.category_label],
         ["Priority", g.priority],
         ["Status", g.status],
         ["Date Filed", g.created_at.strftime("%d %b %Y, %I:%M %p")],
