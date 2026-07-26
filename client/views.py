@@ -489,6 +489,50 @@ def grievance_detail(request, pk):
         {"grievance": grievance, "history": history},
     )
 
+@login_required(login_url="login")
+@require_POST
+def grievance_manage(request):
+    """Single POST endpoint for the Track Grievances page's Edit/Delete
+    modals — same action-dispatch pattern as the admin panel's forms.
+    Only the owning user can edit/delete their own grievance, and only
+    while it's still Pending (once a staff member starts reviewing it,
+    changing or removing it would break the status history / audit trail)."""
+    action = request.POST.get("action")
+    grievance = get_object_or_404(Grievance, pk=request.POST.get("grievance_id"), user=request.user)
+
+    if grievance.status != "Pending":
+        messages.error(request, "This grievance can no longer be edited or deleted — it's already being processed.")
+        return redirect("track_grievance")
+
+    if action == "edit":
+        subject = request.POST.get("subject", "").strip()
+        description = request.POST.get("description", "").strip()
+        priority_raw = request.POST.get("priority", "Medium").capitalize()
+        category_raw = request.POST.get("category", "other").strip()
+
+        if not subject or not description:
+            messages.error(request, "Please provide both a subject and a description.")
+            return redirect("track_grievance")
+
+        valid_priorities = dict(Grievance.PRIORITY_CHOICES)
+        valid_categories = dict(Grievance.CATEGORY_CHOICES)
+
+        grievance.subject = subject
+        grievance.description = description
+        grievance.priority = priority_raw if priority_raw in valid_priorities else grievance.priority
+        grievance.category = category_raw if category_raw in valid_categories else grievance.category
+        grievance.save()
+        messages.success(request, "Grievance updated successfully.")
+
+    elif action == "delete":
+        grievance.delete()
+        messages.success(request, "Grievance deleted.")
+
+    else:
+        messages.error(request, "Unknown action.")
+
+    return redirect("track_grievance")
+
 
 # =============================================================================
 # Job Listings (DB-backed)

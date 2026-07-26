@@ -43,6 +43,7 @@ urlpatterns = [
     path("api/notifications/<int:pk>/read/", views.mark_notification_read, name="mark_notification_read"),
     path("api/notifications/mark-all-read/", views.mark_all_notifications_read, name="mark_all_notifications_read"),
     path("api/check-username/", views.check_username, name="check_username"),
-path("api/check-email/", views.check_email, name="check_email"),
-path("api/check-phone/", views.check_phone, name="check_phone"),
+    path("api/check-email/", views.check_email, name="check_email"),
+    path("api/check-phone/", views.check_phone, name="check_phone"),
+    path("grievances/manage/", views.grievance_manage, name="grievance_manage"),
 ]
