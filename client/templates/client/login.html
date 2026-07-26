@@ -442,11 +442,6 @@
                 </div>
               </div>
 
-              <label class="flex items-center gap-2 text-xs text-gray-600 mb-4">
-                <input type="checkbox" id="terms-cb" class="accent-brand-blue rounded">
-                I agree to the Terms &amp; Conditions and Privacy Policy.
-              </label>
-
               <div class="flex gap-3 mt-1">
                 <button type="button" onclick="prevStep(3)"
                         class="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg
@@ -679,18 +674,6 @@ function populateReview() {
   var rvPhoto = document.getElementById('rv-photo');
   rvPhoto.textContent = formData.avatarFile ? 'Added' : 'Not added (can add later)';
 }
-
-// ── Submit guard (terms checkbox) ─────────────────────────
-// NOTE: this is a final safety net, not the primary validation path —
-// email/username/phone uniqueness is already confirmed by the time the
-// user reaches this point. The server's unique constraints remain the
-// ultimate source of truth in case something changed between steps.
-document.getElementById('signup-form').addEventListener('submit', function (e) {
-  if (!document.getElementById('terms-cb').checked) {
-    e.preventDefault();
-    alert('Please accept the Terms & Conditions to continue.');
-  }
-});
 
 // ── Field helpers ─────────────────────────────────────────
 function showErr(id, show, msg) {
