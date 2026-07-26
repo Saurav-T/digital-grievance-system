@@ -96,8 +96,6 @@ def dashboard(request):
         carousel_images = []
 
     # ── Recent tables ─────────────────────────────────────────────────────────
-    # NOTE: Grievance.category is now a plain CharField (see client/models.py),
-    # not a FK, so it no longer needs — or supports — select_related("category").
     recent_grievances = (
         Grievance.objects.select_related("user").order_by("-created_at")[:5]
     )
@@ -448,8 +446,6 @@ def grievances(request):
                 grievance.description = request.POST["description"]
                 grievance.priority    = request.POST["priority"]
 
-                # category is now a CharField slug (e.g. "roads_infrastructure"),
-                # matching Grievance.CATEGORY_CHOICES — no more Category FK lookup.
                 cat_raw = request.POST.get("category", "")
                 valid_categories = dict(Grievance.CATEGORY_CHOICES)
                 if cat_raw in valid_categories:
@@ -480,7 +476,6 @@ def grievances(request):
             messages.error(request, f"Error: {exc}")
         return redirect("admin_panel:grievances")
 
-    # category is a CharField now, so select_related("category") is gone.
     qs = Grievance.objects.select_related("user").order_by("-created_at")
 
     status_filter   = request.GET.get("status", "")
@@ -625,7 +620,6 @@ def notices(request):
                     description=request.POST["description"],
                     category=request.POST.get("category", "general"),
                     created_by=request.user,
-                    # issue_date is auto_now_add — always "now", not form-editable.
                 )
                 if "image" in request.FILES:
                     n.image = request.FILES["image"]
@@ -644,8 +638,6 @@ def notices(request):
                 n.title       = request.POST["title"]
                 n.description = request.POST["description"]
                 n.category    = request.POST.get("category", n.category)
-                # issue_date is intentionally left untouched — it reflects
-                # the original publish time and can't be edited.
                 if "image" in request.FILES:
                     n.image = request.FILES["image"]
                 n.save()
@@ -653,7 +645,7 @@ def notices(request):
 
             elif action == "delete":
                 n = get_object_or_404(Notice, pk=request.POST["notice_id"])
-                n.delete()  # cascades to any Notification rows tied to this notice
+                n.delete()
                 messages.success(request, "Notice deleted.")
 
         except Exception as exc:
@@ -697,12 +689,12 @@ def jobs(request):
                     job_title=request.POST["job_title"],
                     department=request.POST["department"],
                     department_location=request.POST["department_location"],
-                    # issue_date is auto_now_add — always "now"
                     deadline=deadline,
                     job_description=request.POST["job_description"],
                     age_requirement=request.POST.get("age_requirement", ""),
                     job_requirements=request.POST["job_requirements"],
                     contact_information=request.POST["contact_information"],
+                    contact_email=(request.POST.get("contact_email", "").strip() or None),
                     is_active=True,
                     created_by=request.user,
                 )
@@ -720,12 +712,11 @@ def jobs(request):
                 j.job_title           = request.POST["job_title"]
                 j.department          = request.POST["department"]
                 j.department_location = request.POST["department_location"]
-                # issue_date is intentionally left untouched — it reflects
-                # the original publish time and can't be edited.
                 j.job_description     = request.POST["job_description"]
                 j.age_requirement     = request.POST.get("age_requirement", "")
                 j.job_requirements    = request.POST["job_requirements"]
                 j.contact_information = request.POST["contact_information"]
+                j.contact_email       = request.POST.get("contact_email", "").strip() or None
                 deadline_raw = request.POST["deadline"]
                 if isinstance(deadline_raw, str):
                     j.deadline = datetime.strptime(deadline_raw.strip(), "%Y-%m-%d").date()
@@ -742,7 +733,7 @@ def jobs(request):
 
             elif action == "delete":
                 j = get_object_or_404(JobListing, pk=request.POST["job_id"])
-                j.delete()  # cascades to any Notification rows tied to this job
+                j.delete()
                 messages.success(request, "Job listing deleted.")
 
         except Exception as exc:
@@ -764,6 +755,7 @@ def job_json(request, pk):
         "age_requirement": j.age_requirement,
         "job_requirements": j.job_requirements,
         "contact_information": j.contact_information,
+        "contact_email": j.contact_email or "",
         "is_active": j.is_active,
     })
 

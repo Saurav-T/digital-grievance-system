@@ -266,6 +266,7 @@ class JobListing(models.Model):
     age_requirement     = models.CharField(max_length=100)
     job_requirements     = models.TextField()
     contact_information = models.TextField()
+    contact_email        = models.EmailField(blank=True, null=True)
     is_active           = models.BooleanField(default=True)
     created_by          = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="job_listings")
     created_at          = models.DateTimeField(auto_now_add=True)

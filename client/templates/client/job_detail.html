@@ -114,7 +114,8 @@
           </svg>
         </a>
 
-        <!-- Send Email -->
+        <!-- Send Email — only shown when the listing has a contact email -->
+        {% if job.contact_email %}
         <a id="send-email-btn"
            href="#"
            target="_blank"
@@ -128,6 +129,7 @@
                   d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
           </svg>
         </a>
+        {% endif %}
 
         <!-- Attached Media -->
         <button type="button" onclick="openMediaModal()"
@@ -287,9 +289,13 @@ function closeMediaModal() {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMediaModal(); });
 
-/* Gmail composer */
+/* Gmail composer — only runs if the Send Email button is actually on the page
+   (i.e. the job listing has a contact_email set). */
 (function buildGmailLink() {
-  const toEmail  = '{{ job.contact_email|default:"hr@example.gov.np" }}';
+  const btn = document.getElementById('send-email-btn');
+  if (!btn) return; // no contact email on this job — button isn't rendered, nothing to do
+
+  const toEmail  = '{{ job.contact_email }}';
   const position = '{{ job.title|default:"Position" }}';
   const org      = '{{ job.department|default:"" }}';
 
@@ -303,7 +309,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMediaMo
   );
 
   const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(toEmail)}&su=${subject}&body=${body}`;
-  document.getElementById('send-email-btn').href = gmailUrl;
+  btn.href = gmailUrl;
 })();
 
 /* Bookmark functionality (server-backed) */

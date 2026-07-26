@@ -108,6 +108,14 @@
                     <textarea name="job_requirements" rows="3" required class="adm-input resize-none"></textarea></div>
                 <div class="col-span-2"><label class="adm-label">Contact Information *</label>
                     <textarea name="contact_information" rows="2" required class="adm-input resize-none"></textarea></div>
+                <div class="col-span-2">
+                    <label class="adm-label">Contact Email <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <input type="email" name="contact_email" class="adm-input" placeholder="e.g. hr@ministry.gov.np">
+                    <p class="text-xs text-gray-400 mt-1">
+                        If provided, applicants will see a "Send Email" button on the job page addressed to this email.
+                        Leave blank to hide that button.
+                    </p>
+                </div>
             </div>
             <p class="px-6 pb-2 text-xs text-gray-400">Published date is recorded automatically when you publish this listing.</p>
             <div class="flex justify-end gap-3 px-6 py-4 border-t bg-gray-50 rounded-b-xl">
@@ -149,6 +157,14 @@
                     <textarea name="job_requirements" id="ej-req" rows="3" required class="adm-input resize-none"></textarea></div>
                 <div class="col-span-2"><label class="adm-label">Contact Information *</label>
                     <textarea name="contact_information" id="ej-contact" rows="2" required class="adm-input resize-none"></textarea></div>
+                <div class="col-span-2">
+                    <label class="adm-label">Contact Email <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <input type="email" name="contact_email" id="ej-email" class="adm-input" placeholder="e.g. hr@ministry.gov.np">
+                    <p class="text-xs text-gray-400 mt-1">
+                        If provided, applicants will see a "Send Email" button on the job page addressed to this email.
+                        Leave blank to hide that button.
+                    </p>
+                </div>
             </div>
             <p class="px-6 pb-2 text-xs text-gray-400">Published date can't be changed — it's fixed to when the listing was first published.</p>
             <div class="flex justify-end gap-3 px-6 py-4 border-t bg-gray-50 rounded-b-xl">
@@ -229,6 +245,7 @@ async function loadJobEdit(pk) {
     document.getElementById('ej-desc').value     = d.job_description;
     document.getElementById('ej-req').value      = d.job_requirements;
     document.getElementById('ej-contact').value  = d.contact_information;
+    document.getElementById('ej-email').value    = d.contact_email || '';
     openModal('modal-edit-job');
 }
 
