@@ -1,7 +1,7 @@
 import io
 import json
 import os
-from datetime import timedelta
+from datetime import datetime
 from functools import wraps
 
 from django.contrib import messages
@@ -673,12 +673,19 @@ def jobs(request):
         action = request.POST.get("action")
         try:
             if action == "add":
+                # Browser <input type="date"> always posts YYYY-MM-DD as a string
+                deadline_raw = request.POST["deadline"]
+                if isinstance(deadline_raw, str):
+                    deadline = datetime.strptime(deadline_raw.strip(), "%Y-%m-%d").date()
+                else:
+                    deadline = deadline_raw
+
                 j = JobListing.objects.create(
                     job_title=request.POST["job_title"],
                     department=request.POST["department"],
                     department_location=request.POST["department_location"],
-                    # issue_date is auto_now_add — always "now", not form-editable.
-                    deadline=request.POST["deadline"],
+                    # issue_date is auto_now_add — always "now"
+                    deadline=deadline,
                     job_description=request.POST["job_description"],
                     age_requirement=request.POST.get("age_requirement", ""),
                     job_requirements=request.POST["job_requirements"],
@@ -702,11 +709,15 @@ def jobs(request):
                 j.department_location = request.POST["department_location"]
                 # issue_date is intentionally left untouched — it reflects
                 # the original publish time and can't be edited.
-                j.deadline            = request.POST["deadline"]
                 j.job_description     = request.POST["job_description"]
                 j.age_requirement     = request.POST.get("age_requirement", "")
                 j.job_requirements    = request.POST["job_requirements"]
                 j.contact_information = request.POST["contact_information"]
+                deadline_raw = request.POST["deadline"]
+                if isinstance(deadline_raw, str):
+                    j.deadline = datetime.strptime(deadline_raw.strip(), "%Y-%m-%d").date()
+                else:
+                    j.deadline = deadline_raw
                 j.save()
                 messages.success(request, "Job listing updated.")
 
