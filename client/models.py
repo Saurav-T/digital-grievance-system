@@ -87,11 +87,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 # ---------------------------------------------------------------------------
 # Grievance Categories
 # ---------------------------------------------------------------------------
-# Fixed government-service categories. Kept as a CharField + choices (same
-# pattern as Notice.category) rather than a separate Category table, since
-# these are predefined and don't need to be created/renamed from the admin
-# panel. Add/remove entries here and the dropdown, badges, and filters
-# everywhere in the app update automatically.
 
 GRIEVANCE_CATEGORY_STYLES = {
     "administrative_services": ("Administrative Services",     "bg-slate-100 text-slate-700"),
@@ -198,9 +193,6 @@ class Grievance(models.Model):
 # Notice
 # ---------------------------------------------------------------------------
 
-# Each entry: slug -> (display label, Tailwind pill classes).
-# Used for the admin "Add/Edit Notice" category dropdown and for rendering
-# the small category pill on notice cards / the notice detail page.
 NOTICE_CATEGORY_STYLES = {
     "general":              ("General Notice",        "bg-gray-100 text-gray-700"),
     "public_announcement":  ("Public Announcement",    "bg-blue-100 text-blue-700"),
@@ -256,6 +248,42 @@ class Notice(models.Model):
 # JobListing
 # ---------------------------------------------------------------------------
 
+def _attachment_media_entry(file_field):
+    """Turn a FileField value into the dict shape the Attached Media modal
+    expects: {name, type, size, url}. Returns None if the field is empty."""
+    if not file_field:
+        return None
+
+    name = file_field.name.rsplit("/", 1)[-1]
+    ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+
+    if ext == "pdf":
+        ftype = "pdf"
+    elif ext in ("doc", "docx"):
+        ftype = "docx"
+    elif ext in ("png", "jpg", "jpeg", "gif", "webp"):
+        ftype = "image"
+    else:
+        ftype = "file"
+
+    try:
+        size_bytes = file_field.size
+    except Exception:
+        size_bytes = 0
+
+    if size_bytes >= 1024 * 1024:
+        size = f"{size_bytes / (1024 * 1024):.1f} MB"
+    else:
+        size = f"{max(size_bytes // 1024, 1)} KB"
+
+    try:
+        url = file_field.url
+    except Exception:
+        url = ""
+
+    return {"name": name, "type": ftype, "size": size, "url": url}
+
+
 class JobListing(models.Model):
     job_title           = models.CharField(max_length=255)
     department          = models.CharField(max_length=150)
@@ -266,6 +294,13 @@ class JobListing(models.Model):
     age_requirement     = models.CharField(max_length=100)
     job_requirements     = models.TextField()
     contact_information = models.TextField()
+    contact_email        = models.EmailField(blank=True, null=True)
+
+    # Up to two optional attachments of any file type (e.g. a CV-format
+    # DOCX guide, a PDF pamphlet about the hiring office, etc).
+    attachment_1 = models.FileField(upload_to="job_attachments/", null=True, blank=True)
+    attachment_2 = models.FileField(upload_to="job_attachments/", null=True, blank=True)
+
     is_active           = models.BooleanField(default=True)
     created_by          = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="job_listings")
     created_at          = models.DateTimeField(auto_now_add=True)
@@ -293,6 +328,16 @@ class JobListing(models.Model):
             "Expired": "bg-yellow-100 text-yellow-700",
             "Closed":  "bg-red-100 text-red-700",
         }.get(self.status, "bg-gray-100 text-gray-700")
+
+    def attached_media_list(self):
+        """Returns a list (0-2 items) of {name, type, size, url} dicts for
+        whichever of attachment_1 / attachment_2 are actually set."""
+        media = []
+        for f in (self.attachment_1, self.attachment_2):
+            entry = _attachment_media_entry(f)
+            if entry:
+                media.append(entry)
+        return media
 
 
 # ---------------------------------------------------------------------------
@@ -419,10 +464,6 @@ class Notification(models.Model):
     is_read    = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # Optional links back to the source record. Set to CASCADE so that
-    # deleting a Notice/JobListing/Grievance automatically removes every
-    # notification that was generated from it — no extra cleanup code needed
-    # in the delete views.
     related_notice    = models.ForeignKey(Notice, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications_for")
     related_job       = models.ForeignKey(JobListing, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications_for")
     related_grievance = models.ForeignKey(Grievance, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications_for")
@@ -439,7 +480,6 @@ class Notification(models.Model):
         return f"[{self.type}] {self.title} → {self.user}"
 
 
-# Friendly labels for each grievance status, used when composing notification text.
 GRIEVANCE_STATUS_LABELS = {
     "Pending":   "Submitted",
     "In Review": "Accepted for Review",
@@ -449,8 +489,6 @@ GRIEVANCE_STATUS_LABELS = {
 
 
 def _notif_pref_allows(user, ntype):
-    """Return True if user currently has this notification type enabled
-    (defaults to True if no preference row exists yet)."""
     pref = NotificationPreference.objects.filter(user=user).first()
     if not pref:
         return True
@@ -463,9 +501,6 @@ def _notif_pref_allows(user, ntype):
 
 def create_notification(user, ntype, title, body="", url="#",
                          related_notice=None, related_job=None, related_grievance=None):
-    """Create a single Notification for user, respecting their preference
-    toggle for this type. Returns the created Notification, or None if the
-    user has this notification type disabled."""
     if not _notif_pref_allows(user, ntype):
         return None
     return Notification.objects.create(
@@ -475,8 +510,6 @@ def create_notification(user, ntype, title, body="", url="#",
 
 
 def notify_grievance_status(grievance, status):
-    """Notify a grievance's owner that its status is now status
-    (one of Grievance.STATUS_CHOICES), respecting their preference."""
     from django.urls import reverse
     label = GRIEVANCE_STATUS_LABELS.get(status, status)
     subject = grievance.subject
@@ -504,8 +537,6 @@ def notify_grievance_status(grievance, status):
 
 
 def notify_all_citizens(ntype, title, body="", url="#", related_notice=None, related_job=None):
-    """Broadcast a notification (new notice / new job listing) to every
-    active citizen who currently has this notification type enabled."""
     citizens = User.objects.filter(user_type="Citizen", is_active=True)
     prefs_by_user = {
         p.user_id: p

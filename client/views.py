@@ -589,8 +589,8 @@ def job_detail(request, pk):
         "age_requirement": job.age_requirement,
         "deadline": job.deadline.strftime("%d %B, %Y") if job.deadline else "",
         "contact": job.contact_information,
-        "contact_email": "",
-        "attached_media": [],
+        "contact_email": job.contact_email or "",
+        "attached_media": job.attached_media_list(),
         "is_saved": is_saved,
     }
 
@@ -610,7 +610,6 @@ def job_detail(request, pk):
         "client/job_detail.html",
         {"job": job_payload, "recent_jobs": recent_payload},
     )
-
 
 @xframe_options_exempt
 def job_pdf(request, pk):

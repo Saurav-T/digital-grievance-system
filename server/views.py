@@ -61,7 +61,6 @@ def dashboard(request):
     from datetime import timedelta
     now = timezone.now()
 
-    # ── Stat cards ────────────────────────────────────────────────────────────
     stats = {
         "total_complaints": Grievance.objects.count(),
         "complaints_this_month": Grievance.objects.filter(
@@ -71,7 +70,6 @@ def dashboard(request):
         "job_listings": JobListing.objects.filter(is_active=True).count(),
     }
 
-    # ── Charts ────────────────────────────────────────────────────────────────
     status_data = {
         "Pending": Grievance.objects.filter(status="Pending").count(),
         "In Review": Grievance.objects.filter(status="In Review").count(),
@@ -88,16 +86,12 @@ def dashboard(request):
     monthly_labels = [item["month"].strftime("%b %Y") for item in monthly_qs]
     monthly_counts = [item["count"] for item in monthly_qs]
 
-    # ── Carousel images ───────────────────────────────────────────────────────
     try:
         from client.models import CarouselImage
         carousel_images = CarouselImage.objects.order_by("order", "-created_at")
     except Exception:
         carousel_images = []
 
-    # ── Recent tables ─────────────────────────────────────────────────────────
-    # NOTE: Grievance.category is now a plain CharField (see client/models.py),
-    # not a FK, so it no longer needs — or supports — select_related("category").
     recent_grievances = (
         Grievance.objects.select_related("user").order_by("-created_at")[:5]
     )
@@ -121,7 +115,6 @@ def dashboard(request):
 
 @staff_required
 def carousel_upload(request):
-    """POST: upload a new carousel image (redirects back to dashboard)."""
     if request.method == "POST":
         try:
             from client.models import CarouselImage
@@ -144,7 +137,6 @@ def carousel_upload(request):
 
 @staff_required
 def carousel_delete(request, pk):
-    """POST: delete a carousel image and its file from disk."""
     if request.method == "POST":
         try:
             from client.models import CarouselImage
@@ -161,7 +153,6 @@ def carousel_delete(request, pk):
 @staff_required
 @require_POST
 def carousel_reorder(request):
-    """POST (AJAX/JSON): save drag-and-drop image order."""
     try:
         from client.models import CarouselImage
         data = json.loads(request.body)
@@ -174,7 +165,6 @@ def carousel_reorder(request):
 
 @staff_required
 def carousel_api(request):
-    """GET: public JSON endpoint for the client-side hero carousel."""
     try:
         from client.models import CarouselImage
         images = CarouselImage.objects.filter(is_active=True).order_by("order")
@@ -198,10 +188,8 @@ def carousel_api(request):
 
 @staff_required
 def admin_profile(request):
-    """Admin's own profile page."""
     admin_user = request.user
 
-    # ── Handle profile update POST ────────────────────────────────────────────
     if request.method == "POST" and request.POST.get("action") == "update_profile":
         try:
             admin_user.first_name = request.POST.get("first_name", admin_user.first_name)
@@ -214,7 +202,6 @@ def admin_profile(request):
             messages.error(request, f"Error: {exc}")
         return redirect("admin_panel:admin_profile")
 
-    # ── Admin activity stats ──────────────────────────────────────────────────
     admin_stats = [
         {
             "label": "Grievances Handled",
@@ -246,7 +233,6 @@ def admin_profile(request):
         },
     ]
 
-    # ── Overview fields ───────────────────────────────────────────────────────
     overview_fields = [
         {"label": "Full Name", "value": admin_user.get_full_name()},
         {"label": "Email", "value": admin_user.email},
@@ -257,7 +243,6 @@ def admin_profile(request):
         {"label": "Status", "value": "Active" if admin_user.is_active else "Inactive"},
     ]
 
-    # ── System access permissions ─────────────────────────────────────────────
     permissions = [
         {"label": "Manage Users", "granted": admin_user.is_superuser or admin_user.is_staff,
          "bg": "bg-blue-100", "color": "text-brand-blue",
@@ -276,7 +261,6 @@ def admin_profile(request):
          "icon": "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z"},
     ]
 
-    # ── Activity chart data (demo) ────────────────────────────────────────────
     labels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
     act_griev = [3, 5, 2, 8, 6, 4, 7, 9, 5, 6, 8, 4]
     act_notices = [1, 2, 1, 3, 2, 1, 2, 3, 2, 1, 2, 1]
@@ -287,7 +271,6 @@ def admin_profile(request):
     peak_idx = max(range(12), key=lambda i: act_griev[i] + act_notices[i] + act_jobs[i])
     peak_month = labels[peak_idx]
 
-    # ── Notification settings ─────────────────────────────────────────────────
     admin_notif_settings = [
         {"key": "new_grievance", "label": "New Grievance Submitted", "desc": "Notify when a citizen submits a grievance.", "enabled": True},
         {"key": "status_change", "label": "Grievance Status Changed", "desc": "Notify when a grievance status is updated.", "enabled": True},
@@ -448,8 +431,6 @@ def grievances(request):
                 grievance.description = request.POST["description"]
                 grievance.priority    = request.POST["priority"]
 
-                # category is now a CharField slug (e.g. "roads_infrastructure"),
-                # matching Grievance.CATEGORY_CHOICES — no more Category FK lookup.
                 cat_raw = request.POST.get("category", "")
                 valid_categories = dict(Grievance.CATEGORY_CHOICES)
                 if cat_raw in valid_categories:
@@ -480,7 +461,6 @@ def grievances(request):
             messages.error(request, f"Error: {exc}")
         return redirect("admin_panel:grievances")
 
-    # category is a CharField now, so select_related("category") is gone.
     qs = Grievance.objects.select_related("user").order_by("-created_at")
 
     status_filter   = request.GET.get("status", "")
@@ -625,7 +605,6 @@ def notices(request):
                     description=request.POST["description"],
                     category=request.POST.get("category", "general"),
                     created_by=request.user,
-                    # issue_date is auto_now_add — always "now", not form-editable.
                 )
                 if "image" in request.FILES:
                     n.image = request.FILES["image"]
@@ -644,8 +623,6 @@ def notices(request):
                 n.title       = request.POST["title"]
                 n.description = request.POST["description"]
                 n.category    = request.POST.get("category", n.category)
-                # issue_date is intentionally left untouched — it reflects
-                # the original publish time and can't be edited.
                 if "image" in request.FILES:
                     n.image = request.FILES["image"]
                 n.save()
@@ -653,7 +630,7 @@ def notices(request):
 
             elif action == "delete":
                 n = get_object_or_404(Notice, pk=request.POST["notice_id"])
-                n.delete()  # cascades to any Notification rows tied to this notice
+                n.delete()
                 messages.success(request, "Notice deleted.")
 
         except Exception as exc:
@@ -697,12 +674,14 @@ def jobs(request):
                     job_title=request.POST["job_title"],
                     department=request.POST["department"],
                     department_location=request.POST["department_location"],
-                    # issue_date is auto_now_add — always "now"
                     deadline=deadline,
                     job_description=request.POST["job_description"],
                     age_requirement=request.POST.get("age_requirement", ""),
                     job_requirements=request.POST["job_requirements"],
                     contact_information=request.POST["contact_information"],
+                    contact_email=(request.POST.get("contact_email", "").strip() or None),
+                    attachment_1=request.FILES.get("attachment_1"),
+                    attachment_2=request.FILES.get("attachment_2"),
                     is_active=True,
                     created_by=request.user,
                 )
@@ -720,17 +699,35 @@ def jobs(request):
                 j.job_title           = request.POST["job_title"]
                 j.department          = request.POST["department"]
                 j.department_location = request.POST["department_location"]
-                # issue_date is intentionally left untouched — it reflects
-                # the original publish time and can't be edited.
                 j.job_description     = request.POST["job_description"]
                 j.age_requirement     = request.POST.get("age_requirement", "")
                 j.job_requirements    = request.POST["job_requirements"]
                 j.contact_information = request.POST["contact_information"]
+                j.contact_email       = request.POST.get("contact_email", "").strip() or None
+
                 deadline_raw = request.POST["deadline"]
                 if isinstance(deadline_raw, str):
                     j.deadline = datetime.strptime(deadline_raw.strip(), "%Y-%m-%d").date()
                 else:
                     j.deadline = deadline_raw
+
+                # Attachment 1: remove takes priority over replace, replace takes
+                # priority over "leave as-is".
+                if request.POST.get("remove_attachment_1") == "on":
+                    if j.attachment_1:
+                        j.attachment_1.delete(save=False)
+                    j.attachment_1 = None
+                elif "attachment_1" in request.FILES:
+                    j.attachment_1 = request.FILES["attachment_1"]
+
+                # Attachment 2: same rule.
+                if request.POST.get("remove_attachment_2") == "on":
+                    if j.attachment_2:
+                        j.attachment_2.delete(save=False)
+                    j.attachment_2 = None
+                elif "attachment_2" in request.FILES:
+                    j.attachment_2 = request.FILES["attachment_2"]
+
                 j.save()
                 messages.success(request, "Job listing updated.")
 
@@ -742,7 +739,7 @@ def jobs(request):
 
             elif action == "delete":
                 j = get_object_or_404(JobListing, pk=request.POST["job_id"])
-                j.delete()  # cascades to any Notification rows tied to this job
+                j.delete()
                 messages.success(request, "Job listing deleted.")
 
         except Exception as exc:
@@ -755,6 +752,15 @@ def jobs(request):
 
 def job_json(request, pk):
     j = get_object_or_404(JobListing, pk=pk)
+
+    def _file_meta(f):
+        if not f:
+            return {"name": "", "url": ""}
+        return {"name": f.name.rsplit("/", 1)[-1], "url": f.url}
+
+    att1 = _file_meta(j.attachment_1)
+    att2 = _file_meta(j.attachment_2)
+
     return JsonResponse({
         "id": j.id, "job_title": j.job_title, "department": j.department,
         "department_location": j.department_location,
@@ -764,6 +770,11 @@ def job_json(request, pk):
         "age_requirement": j.age_requirement,
         "job_requirements": j.job_requirements,
         "contact_information": j.contact_information,
+        "contact_email": j.contact_email or "",
+        "attachment_1_name": att1["name"],
+        "attachment_1_url": att1["url"],
+        "attachment_2_name": att2["name"],
+        "attachment_2_url": att2["url"],
         "is_active": j.is_active,
     })
 
