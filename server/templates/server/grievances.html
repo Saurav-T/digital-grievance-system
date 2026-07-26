@@ -51,7 +51,7 @@
                     <td><span class="badge {{ g.status_colour }}">{{ g.status }}</span></td>
                     <td class="text-xs text-gray-500 whitespace-nowrap">{{ g.created_at|date:"d M Y" }}</td>
                     <td>
-                        <div class="flex flex-wrap gap-1">
+                        <div class="flex items-center gap-1 whitespace-nowrap">
                             <button onclick="openGrievanceView({{ g.id }})"
                                     class="act-btn bg-blue-50 text-blue-700 hover:bg-blue-100">View</button>
                             {% if g.status != 'Resolved' %}

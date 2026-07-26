@@ -44,12 +44,16 @@
                 <tr data-author="{{ n.created_by.get_full_name|default:'' }}" data-category="{{ n.category }}">
                     <td class="font-mono text-xs text-gray-400">#{{ n.id }}</td>
                     <td class="font-medium max-w-xs truncate" title="{{ n.title }}">{{ n.title }}</td>
-                    <td><span class="badge {{ n.category_colour }}">{{ n.category_label }}</span></td>
+                 <td>
+                    <span class="badge {{ n.category_colour }} inline-block max-w-40 truncate whitespace-nowrap">
+                        {{ n.category_label }}
+                    </span>
+                </td>
                     <td class="whitespace-nowrap text-sm">{{ n.issue_date|date:"d M Y" }}</td>
                     <td class="text-sm text-gray-500">{{ n.created_by.get_full_name|default:"—" }}</td>
                     <td class="text-xs text-gray-400 whitespace-nowrap">{{ n.created_at|date:"d M Y" }}</td>
                     <td>
-                        <div class="flex flex-wrap gap-1">
+                        <div class="flex items-center gap-1 whitespace-nowrap">
                             <button onclick="openNoticeView({{ n.id }})"
                                     class="act-btn bg-blue-50 text-blue-700 hover:bg-blue-100">View</button>
                             <button onclick="loadNoticeEdit({{ n.id }})"

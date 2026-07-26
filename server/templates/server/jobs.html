@@ -45,7 +45,7 @@
                     <td class="whitespace-nowrap text-sm">{{ j.deadline|date:"d M Y" }}</td>
                     <td><span class="badge {{ j.status_colour }}">{{ j.status }}</span></td>
                     <td>
-                        <div class="flex flex-wrap gap-1">
+                        <div class="flex items-center gap-1 whitespace-nowrap">
                             <button onclick="openJobView({{ j.id }})"
                                     class="act-btn bg-blue-50 text-blue-700 hover:bg-blue-100">View</button>
                             <button onclick="loadJobEdit({{ j.id }})"
