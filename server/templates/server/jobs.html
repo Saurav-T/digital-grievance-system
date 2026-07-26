@@ -88,7 +88,7 @@
             <h3 class="font-semibold text-lg">Add Job Listing</h3>
             <button onclick="closeModal('modal-add-job')" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
         </div>
-        <form method="post" action="{% url 'admin_panel:jobs' %}">
+        <form method="post" action="{% url 'admin_panel:jobs' %}" enctype="multipart/form-data">
             {% csrf_token %}
             <input type="hidden" name="action" value="add">
             <div class="p-6 grid grid-cols-2 gap-4">
@@ -116,6 +116,16 @@
                         Leave blank to hide that button.
                     </p>
                 </div>
+                <div>
+                    <label class="adm-label">Attachment 1 <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <input type="file" name="attachment_1" class="adm-input py-1.5">
+                    <p class="text-xs text-gray-400 mt-1">Any file type, e.g. a CV-format guide (.docx).</p>
+                </div>
+                <div>
+                    <label class="adm-label">Attachment 2 <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <input type="file" name="attachment_2" class="adm-input py-1.5">
+                    <p class="text-xs text-gray-400 mt-1">Any file type, e.g. an office pamphlet (.pdf).</p>
+                </div>
             </div>
             <p class="px-6 pb-2 text-xs text-gray-400">Published date is recorded automatically when you publish this listing.</p>
             <div class="flex justify-end gap-3 px-6 py-4 border-t bg-gray-50 rounded-b-xl">
@@ -136,7 +146,7 @@
             <h3 class="font-semibold text-lg">Edit Job Listing</h3>
             <button onclick="closeModal('modal-edit-job')" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
         </div>
-        <form method="post" action="{% url 'admin_panel:jobs' %}">
+        <form method="post" action="{% url 'admin_panel:jobs' %}" enctype="multipart/form-data">
             {% csrf_token %}
             <input type="hidden" name="action" value="edit">
             <input type="hidden" name="job_id" id="ej-id">
@@ -164,6 +174,28 @@
                         If provided, applicants will see a "Send Email" button on the job page addressed to this email.
                         Leave blank to hide that button.
                     </p>
+                </div>
+
+                <!-- Attachment 1 -->
+                <div>
+                    <label class="adm-label">Attachment 1 <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <p class="text-xs text-gray-500 mb-1.5" id="ej-att1-current"></p>
+                    <input type="file" name="attachment_1" id="ej-att1-input" class="adm-input py-1.5">
+                    <label id="ej-att1-remove-wrap" class="hidden mt-1.5 flex items-center gap-2 text-xs text-red-600">
+                        <input type="checkbox" name="remove_attachment_1" id="ej-att1-remove" class="h-3.5 w-3.5 rounded accent-red-600">
+                        Remove current file
+                    </label>
+                </div>
+
+                <!-- Attachment 2 -->
+                <div>
+                    <label class="adm-label">Attachment 2 <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <p class="text-xs text-gray-500 mb-1.5" id="ej-att2-current"></p>
+                    <input type="file" name="attachment_2" id="ej-att2-input" class="adm-input py-1.5">
+                    <label id="ej-att2-remove-wrap" class="hidden mt-1.5 flex items-center gap-2 text-xs text-red-600">
+                        <input type="checkbox" name="remove_attachment_2" id="ej-att2-remove" class="h-3.5 w-3.5 rounded accent-red-600">
+                        Remove current file
+                    </label>
                 </div>
             </div>
             <p class="px-6 pb-2 text-xs text-gray-400">Published date can't be changed — it's fixed to when the listing was first published.</p>
@@ -246,7 +278,31 @@ async function loadJobEdit(pk) {
     document.getElementById('ej-req').value      = d.job_requirements;
     document.getElementById('ej-contact').value  = d.contact_information;
     document.getElementById('ej-email').value    = d.contact_email || '';
+
+    // Reset file inputs (browsers won't let us pre-fill them) and show
+    // the currently attached file name + a "remove" option if one exists.
+    setAttachmentSlot('ej-att1', d.attachment_1_name, d.attachment_1_url);
+    setAttachmentSlot('ej-att2', d.attachment_2_name, d.attachment_2_url);
+
     openModal('modal-edit-job');
+}
+
+function setAttachmentSlot(prefix, name, url) {
+    const currentEl   = document.getElementById(prefix + '-current');
+    const inputEl      = document.getElementById(prefix + '-input');
+    const removeWrap   = document.getElementById(prefix + '-remove-wrap');
+    const removeCheck  = document.getElementById(prefix + '-remove');
+
+    inputEl.value = '';
+    if (removeCheck) removeCheck.checked = false;
+
+    if (name) {
+        currentEl.innerHTML = 'Current file: <a href="' + url + '" target="_blank" class="text-brand-blue underline">' + name + '</a>';
+        removeWrap.classList.remove('hidden');
+    } else {
+        currentEl.textContent = 'No file attached yet.';
+        removeWrap.classList.add('hidden');
+    }
 }
 
 // ── Search + status filter for job listings ─────────────────

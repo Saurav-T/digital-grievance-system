@@ -11,6 +11,7 @@
   .file-badge-pdf   { background:#fef2f2; color:#dc2626; }
   .file-badge-docx  { background:#eff6ff; color:#2563eb; }
   .file-badge-image { background:#f0fdf4; color:#16a34a; }
+  .file-badge-file  { background:#f3f4f6; color:#4b5563; }
 
   /* Bookmark toggle */
   #detail-bookmark-btn svg { transition: fill 0.2s, stroke 0.2s; }
@@ -131,7 +132,8 @@
         </a>
         {% endif %}
 
-        <!-- Attached Media -->
+        <!-- Attached Media — only shown when at least one attachment exists -->
+        {% if job.attached_media %}
         <button type="button" onclick="openMediaModal()"
                 class="inline-flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-50
                        text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm">
@@ -141,12 +143,11 @@
             <path stroke-linecap="round" stroke-linejoin="round"
                   d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
           </svg>
-          {% if job.attached_media %}
           <span class="inline-flex items-center justify-center h-5 w-5 rounded-full bg-brand-blue text-white text-xs font-bold">
             {{ job.attached_media|length }}
           </span>
-          {% endif %}
         </button>
+        {% endif %}
       </div>
 
       <!-- PDF Viewer (Iframe kept) -->
@@ -233,10 +234,17 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
           </div>
-          {% else %}
+          {% elif media.type == 'image' %}
           <div class="w-10 h-10 rounded-lg file-badge-image flex items-center justify-center flex-shrink-0">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          {% else %}
+          <div class="w-10 h-10 rounded-lg file-badge-file flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v6h6"/>
             </svg>
           </div>
           {% endif %}

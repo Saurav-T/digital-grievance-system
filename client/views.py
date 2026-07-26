@@ -590,7 +590,7 @@ def job_detail(request, pk):
         "deadline": job.deadline.strftime("%d %B, %Y") if job.deadline else "",
         "contact": job.contact_information,
         "contact_email": job.contact_email or "",
-        "attached_media": [],
+        "attached_media": job.attached_media_list(),
         "is_saved": is_saved,
     }
 
