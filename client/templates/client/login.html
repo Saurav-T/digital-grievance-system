@@ -220,8 +220,11 @@
                 </div>
                 <div>
                   <label class="block text-sm font-semibold text-gray-700 mb-1">Email Address *</label>
-                  <input id="s-email" name="email" type="email" placeholder="you@example.com"
-                         class="auth-input" oninput="validateEmail(this)">
+                  <div class="relative">
+                    <input id="s-email" name="email" type="email" placeholder="you@example.com"
+                           class="auth-input pr-24" oninput="validateEmail(this)">
+                    <span id="email-status" class="absolute right-3 top-2.5 text-xs font-medium"></span>
+                  </div>
                   <p class="text-xs mt-1 hidden" id="err-email">Invalid email format.</p>
                 </div>
                 <div>
@@ -261,6 +264,7 @@
                     <li id="req-num"  class="flex items-center gap-1.5 text-gray-400"><span>○</span> One number</li>
                     <li id="req-spec" class="flex items-center gap-1.5 text-gray-400"><span>○</span> One special character</li>
                   </ul>
+                  <p class="text-xs text-red-500 mt-1 hidden" id="err-pw">Password must be at least 8 characters.</p>
                 </div>
                 <div>
                   <label class="block text-sm font-semibold text-gray-700 mb-1">Confirm Password *</label>
@@ -350,14 +354,18 @@
               <div class="space-y-4">
                 <div>
                   <label class="block text-sm font-semibold text-gray-700 mb-1">Phone Number *</label>
-                  <input id="s-phone" name="phone_number" type="tel" placeholder="+977 9800000000"
-                         class="auth-input" oninput="formatPhone(this)" maxlength="14">
+                  <div class="relative">
+                    <input id="s-phone" name="phone_number" type="tel" placeholder="+977 9800000000"
+                           class="auth-input pr-24" oninput="handlePhoneInput(this)" maxlength="14">
+                    <span id="phone-status" class="absolute right-3 top-2.5 text-xs font-medium"></span>
+                  </div>
                   <p class="text-xs text-red-500 mt-1 hidden" id="err-phone">Enter a valid phone number.</p>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Date of Birth *</label>
                     <input id="s-dob" name="dob" type="date" class="auth-input" max="{{ today }}">
+                    <p class="text-xs text-red-500 mt-1 hidden" id="err-dob">Date of birth is required.</p>
                   </div>
                   <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Gender</label>
@@ -372,11 +380,13 @@
                   <label class="block text-sm font-semibold text-gray-700 mb-1">Address *</label>
                   <input id="s-address" name="address" type="text" placeholder="Ward No. 5, Thamel"
                          class="auth-input">
+                  <p class="text-xs text-red-500 mt-1 hidden" id="err-address">Address is required.</p>
                 </div>
                 <div>
                   <label class="block text-sm font-semibold text-gray-700 mb-1">Municipality / City *</label>
                   <input id="s-city" name="municipality" type="text" placeholder="Kathmandu Metropolitan City"
                          class="auth-input">
+                  <p class="text-xs text-red-500 mt-1 hidden" id="err-city">Municipality / city is required.</p>
                 </div>
               </div>
 
@@ -386,9 +396,9 @@
                                text-sm font-semibold hover:bg-gray-50 transition-colors">
                   ← Back
                 </button>
-                <button type="button" onclick="nextStep(2)"
+                <button id="s2-next" type="button" onclick="nextStep(2)"
                         class="flex-1 bg-brand-blue text-white py-2.5 rounded-lg
-                               font-semibold text-sm hover:bg-blue-900 transition-colors">
+                               font-semibold text-sm hover:bg-blue-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                   Continue →
                 </button>
               </div>
@@ -501,16 +511,51 @@ function gotoStep(n) {
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+// ── Continue button dispatcher ────────────────────────────
+// Each phase's duplicate/availability check happens HERE, on Continue,
+// rather than waiting for the final form submit.
 function nextStep(from) {
-  if (from === 1 && !validateStep1()) return;
-  if (from === 2 && !validateStep2()) return;
-  if (from === 2) { populateReview(); gotoStep(3); return; }
-  gotoStep(from + 1);
+  if (from === 1) { handleStep1Next(); return; }
+  if (from === 2) { handleStep2Next(); return; }
 }
 function prevStep(from) { gotoStep(from - 1); }
 
-// ── Step 1 validation ─────────────────────────────────────
-function validateStep1() {
+function setButtonLoading(btn, loading, loadingText) {
+  if (!btn) return;
+  if (loading) {
+    btn.dataset.originalText = btn.dataset.originalText || btn.textContent;
+    btn.textContent = loadingText || 'Checking…';
+    btn.disabled = true;
+    btn.classList.add('opacity-60', 'cursor-not-allowed');
+  } else {
+    btn.textContent = btn.dataset.originalText || btn.textContent;
+    btn.disabled = false;
+    btn.classList.remove('opacity-60', 'cursor-not-allowed');
+  }
+}
+
+/* ── Shared availability-check helper ─────────────────────
+   TODO (view): confirm /api/check-email/ and /api/check-phone/ exist
+   server-side and return the same {available: bool} JSON shape as the
+   existing /api/check-username/ endpoint. Fails OPEN on network error
+   so a flaky connection never blocks a legitimate signup — the final
+   server-side unique constraint on submit is still the source of truth. */
+function fetchAvailability(url) {
+  return fetch(url)
+    .then(function (r) { return r.json(); })
+    .then(function (data) { return !!data.available; })
+    .catch(function () { return true; });
+}
+function checkEmailAvailability(value)    { return fetchAvailability('/api/check-email/?e=' + encodeURIComponent(value)); }
+function checkUsernameAvailability(value) { return fetchAvailability('/api/check-username/?u=' + encodeURIComponent(value)); }
+function checkPhoneAvailability(value)    { return fetchAvailability('/api/check-phone/?p=' + encodeURIComponent(value)); }
+
+/* ═══════════════════════════════════════════════════════════
+   STEP 1 — Account details
+════════════════════════════════════════════════════════════ */
+
+// Cheap synchronous checks (format, required fields, password rules).
+function validateStep1Sync() {
   var ok = true;
   var name  = document.getElementById('s-name').value.trim();
   var email = document.getElementById('s-email').value.trim();
@@ -518,29 +563,107 @@ function validateStep1() {
   var pw    = document.getElementById('s-pw').value;
   var pw2   = document.getElementById('s-pw2').value;
 
-  if (!name) { showErr('err-name', true); ok=false; } else hideErr('err-name');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('err-email', true, 'Invalid email.'); ok=false; } else hideErr('err-email');
-  if (pw !== pw2) { showErr('err-match', true, 'Passwords do not match.'); ok=false; } else hideErr('err-match');
-  if (pw.length < 8) { alert('Password must be at least 8 characters.'); ok=false; }
-  if (!user) { ok=false; }
+  if (!name) { showErr('err-name', true); ok = false; } else hideErr('err-name');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('err-email', true, 'Invalid email format.'); ok = false; } else hideErr('err-email');
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(user)) { ok = false; }
+  if (pw.length < 8) { showErr('err-pw', true, 'Password must be at least 8 characters.'); ok = false; } else hideErr('err-pw');
+  if (pw !== pw2) { showErr('err-match', true, 'Passwords do not match.'); ok = false; } else hideErr('err-match');
 
-  if (ok) { formData.name=name; formData.email=email; formData.username=user; formData.password=pw; }
   return ok;
 }
 
-// ── Step 2 validation ─────────────────────────────────────
-function validateStep2() {
+// Server-backed checks (email / username uniqueness) — runs on Continue.
+function handleStep1Next() {
+  if (!validateStep1Sync()) return;
+
+  var email = document.getElementById('s-email').value.trim();
+  var user  = document.getElementById('s-username').value.trim();
+  var btn   = document.getElementById('s1-next');
+
+  setButtonLoading(btn, true, 'Checking availability…');
+
+  Promise.all([checkEmailAvailability(email), checkUsernameAvailability(user)])
+    .then(function (results) {
+      var emailAvailable = results[0], usernameAvailable = results[1];
+      setButtonLoading(btn, false);
+
+      var ok = true;
+      var emailInp = document.getElementById('s-email');
+      var emailSt  = document.getElementById('email-status');
+      if (!emailAvailable) {
+        emailInp.classList.add('invalid'); emailInp.classList.remove('valid');
+        showErr('err-email', true, 'This email is already registered.');
+        if (emailSt) { emailSt.textContent = '✗ Registered'; emailSt.className = 'absolute right-3 top-2.5 text-xs font-medium text-red-500'; }
+        ok = false;
+      }
+
+      var userInp = document.getElementById('s-username');
+      var userSt  = document.getElementById('user-status');
+      if (!usernameAvailable) {
+        userInp.classList.add('invalid'); userInp.classList.remove('valid');
+        if (userSt) { userSt.textContent = '✗ Taken'; userSt.className = 'absolute right-3 top-2.5 text-xs font-medium text-red-500'; }
+        ok = false;
+      }
+
+      if (!ok) return;
+
+      formData.name     = document.getElementById('s-name').value.trim();
+      formData.email     = email;
+      formData.username  = user;
+      formData.password  = document.getElementById('s-pw').value;
+      gotoStep(2);
+    });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STEP 2 — Personal information
+════════════════════════════════════════════════════════════ */
+
+function validateStep2Sync() {
+  var ok      = true;
   var phone   = document.getElementById('s-phone').value.trim();
   var dob     = document.getElementById('s-dob').value;
   var address = document.getElementById('s-address').value.trim();
   var city    = document.getElementById('s-city').value.trim();
-  if (!phone||!dob||!address||!city) { alert('Please fill all required fields.'); return false; }
-  formData.phone   = phone;
-  formData.dob     = dob;
-  formData.gender  = document.getElementById('s-gender').value;
-  formData.address = address;
-  formData.city    = city;
-  return true;
+
+  if (!phone) { showErr('err-phone', true, 'Phone number is required.'); ok = false; }
+  if (!dob) { showErr('err-dob', true); ok = false; } else hideErr('err-dob');
+  if (!address) { showErr('err-address', true); ok = false; } else hideErr('err-address');
+  if (!city) { showErr('err-city', true); ok = false; } else hideErr('err-city');
+
+  return ok;
+}
+
+// Server-backed check (phone uniqueness) — runs on Continue.
+function handleStep2Next() {
+  if (!validateStep2Sync()) return;
+
+  var phone = document.getElementById('s-phone').value.trim();
+  var btn   = document.getElementById('s2-next');
+
+  setButtonLoading(btn, true, 'Checking phone number…');
+
+  checkPhoneAvailability(phone).then(function (phoneAvailable) {
+    setButtonLoading(btn, false);
+
+    if (!phoneAvailable) {
+      var phoneInp = document.getElementById('s-phone');
+      var phoneSt  = document.getElementById('phone-status');
+      phoneInp.classList.add('invalid'); phoneInp.classList.remove('valid');
+      showErr('err-phone', true, 'This phone number is already registered.');
+      if (phoneSt) { phoneSt.textContent = '✗ In use'; phoneSt.className = 'absolute right-3 top-2.5 text-xs font-medium text-red-500'; }
+      return;
+    }
+
+    formData.phone   = phone;
+    formData.dob     = document.getElementById('s-dob').value;
+    formData.gender  = document.getElementById('s-gender').value;
+    formData.address = document.getElementById('s-address').value.trim();
+    formData.city    = document.getElementById('s-city').value.trim();
+
+    populateReview();
+    gotoStep(3);
+  });
 }
 
 // ── Review population ─────────────────────────────────────
@@ -558,6 +681,10 @@ function populateReview() {
 }
 
 // ── Submit guard (terms checkbox) ─────────────────────────
+// NOTE: this is a final safety net, not the primary validation path —
+// email/username/phone uniqueness is already confirmed by the time the
+// user reaches this point. The server's unique constraints remain the
+// ultimate source of truth in case something changed between steps.
 document.getElementById('signup-form').addEventListener('submit', function (e) {
   if (!document.getElementById('terms-cb').checked) {
     e.preventDefault();
@@ -586,13 +713,43 @@ function togglePw(id, btn) {
 
 function validateName(inp) { inp.classList.toggle('valid', inp.value.trim().length>1); }
 
+// ── Email: format (sync) + live availability (debounced) ─────────────
+// The authoritative check still happens in handleStep1Next() on Continue;
+// this just gives the person early feedback while they're still typing.
+var emailTimer;
 function validateEmail(inp) {
-  var ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inp.value);
-  inp.classList.toggle('valid', ok); inp.classList.toggle('invalid', !ok && inp.value);
-  var err = document.getElementById('err-email');
-  if (err) err.classList.toggle('hidden', ok);
+  var v  = inp.value.trim();
+  var ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  var st = document.getElementById('email-status');
+
+  inp.classList.toggle('valid', ok);
+  inp.classList.toggle('invalid', !ok && v);
+
+  if (!v) { if (st) st.textContent = ''; hideErr('err-email'); return; }
+  if (!ok) {
+    showErr('err-email', true, 'Invalid email format.');
+    if (st) st.textContent = '';
+    return;
+  }
+  hideErr('err-email');
+  if (st) { st.textContent = 'Checking…'; st.className = 'absolute right-3 top-2.5 text-xs font-medium text-gray-400'; }
+
+  clearTimeout(emailTimer);
+  emailTimer = setTimeout(function () {
+    checkEmailAvailability(v).then(function (available) {
+      if (document.getElementById('s-email').value.trim() !== v) return; // stale response
+      inp.classList.toggle('valid', available);
+      inp.classList.toggle('invalid', !available);
+      if (st) {
+        st.textContent = available ? '✓ Available' : '✗ Registered';
+        st.className = 'absolute right-3 top-2.5 text-xs font-medium ' + (available ? 'text-green-600' : 'text-red-500');
+      }
+      if (!available) showErr('err-email', true, 'This email is already registered.');
+    });
+  }, 500);
 }
 
+// ── Username: format (sync) + live availability (debounced) ──────────
 var userTimer;
 function checkUsername(inp) {
   var v=inp.value.trim(), st=document.getElementById('user-status');
@@ -605,17 +762,15 @@ function checkUsername(inp) {
   if(st){st.textContent='Checking…';st.className='absolute right-3 top-2.5 text-xs font-medium text-gray-400';}
   clearTimeout(userTimer);
   userTimer = setTimeout(function(){
-    fetch('/api/check-username/?u=' + encodeURIComponent(v))
-      .then(function(r){ return r.json(); })
-      .then(function(data){
-        inp.classList.toggle('valid', data.available);
-        inp.classList.toggle('invalid', !data.available);
-        if (st) {
-          st.textContent = data.available ? '✓ Available' : '✗ Taken';
-          st.className = 'absolute right-3 top-2.5 text-xs font-medium ' + (data.available ? 'text-green-600' : 'text-red-500');
-        }
-      })
-      .catch(function(){ if (st) st.textContent = ''; });
+    checkUsernameAvailability(v).then(function (available) {
+      if (document.getElementById('s-username').value.trim() !== v) return; // stale response
+      inp.classList.toggle('valid', available);
+      inp.classList.toggle('invalid', !available);
+      if (st) {
+        st.textContent = available ? '✓ Available' : '✗ Taken';
+        st.className = 'absolute right-3 top-2.5 text-xs font-medium ' + (available ? 'text-green-600' : 'text-red-500');
+      }
+    });
   }, 500);
 }
 
@@ -642,6 +797,7 @@ function checkStrength(inp) {
   var lbl=document.getElementById('strength-label');
   if(lbl){lbl.textContent=v?labels[score]||'Very Strong':'Enter a password';
            lbl.style.color=colors[score]||'#6b7280';}
+  if (v.length >= 8) hideErr('err-pw');
 }
 
 function checkMatch(inp) {
@@ -655,6 +811,39 @@ function formatPhone(inp) {
   var v=inp.value.replace(/[^\d+]/g,'');
   if(v&&!v.startsWith('+'))v='+977 '+v.replace(/^977/,'');
   inp.value=v;
+}
+
+// ── Phone: format (sync) + live availability (debounced) ─────────────
+var phoneTimer;
+function handlePhoneInput(inp) {
+  formatPhone(inp);
+  var v  = inp.value.trim();
+  var st = document.getElementById('phone-status');
+  var digits = v.replace(/\D/g, '');
+
+  if (!v) { if (st) st.textContent = ''; hideErr('err-phone'); return; }
+  if (digits.length < 10) {
+    inp.classList.add('invalid'); inp.classList.remove('valid');
+    showErr('err-phone', true, 'Enter a valid phone number.');
+    if (st) st.textContent = '';
+    return;
+  }
+  hideErr('err-phone');
+  if (st) { st.textContent = 'Checking…'; st.className = 'absolute right-3 top-2.5 text-xs font-medium text-gray-400'; }
+
+  clearTimeout(phoneTimer);
+  phoneTimer = setTimeout(function () {
+    checkPhoneAvailability(v).then(function (available) {
+      if (document.getElementById('s-phone').value.trim() !== v) return; // stale response
+      inp.classList.toggle('valid', available);
+      inp.classList.toggle('invalid', !available);
+      if (st) {
+        st.textContent = available ? '✓ Available' : '✗ In use';
+        st.className = 'absolute right-3 top-2.5 text-xs font-medium ' + (available ? 'text-green-600' : 'text-red-500');
+      }
+      if (!available) showErr('err-phone', true, 'This phone number is already registered.');
+    });
+  }, 500);
 }
 
 /* ── Profile picture upload (step 2) ─────────────────────────

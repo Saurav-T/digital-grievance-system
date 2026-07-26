@@ -187,6 +187,20 @@ def check_username(request):
     available = valid_format and not User.objects.filter(username__iexact=u).exists()
     return JsonResponse({"valid_format": valid_format, "available": available})
 
+def check_email(request):
+    """GET /api/check-email/?e=value -> {"valid_format": bool, "available": bool}"""
+    e = request.GET.get("e", "").strip().lower()
+    valid_format = bool(re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", e))
+    available = valid_format and not User.objects.filter(email__iexact=e).exists()
+    return JsonResponse({"valid_format": valid_format, "available": available})
+
+
+def check_phone(request):
+    """GET /api/check-phone/?p=value -> {"valid_format": bool, "available": bool}"""
+    p = request.GET.get("p", "").strip()
+    valid_format = len(re.sub(r"\D", "", p)) >= 10
+    available = valid_format and not User.objects.filter(phone_number=p).exists()
+    return JsonResponse({"valid_format": valid_format, "available": available})
 
 def client_logout(request):
     logout(request)
