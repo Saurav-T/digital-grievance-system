@@ -16,10 +16,6 @@
 /* ── Stat card ────────────────────────────────────────── */
 .stat-card { background:#f9fafb; border:1px solid #e5e7eb; border-radius:.75rem; padding:1rem; }
 
-/* ── Insight item ─────────────────────────────────────── */
-.insight-item { display:flex; align-items:flex-start; gap:.75rem; padding:.75rem;
-                border-radius:.5rem; background:#f0f9ff; border-left:3px solid #1e3a8a; }
-
 /* ── Notice interest bar ──────────────────────────────── */
 .ni-bar-bg { background:#e5e7eb; border-radius:999px; height:10px; overflow:hidden; }
 .ni-bar    { height:10px; border-radius:999px; background:#1e3a8a; transition:width 1s ease; }
@@ -121,6 +117,74 @@
 }
 .ep-input:focus { border-color: #1e3a8a; box-shadow: 0 0 0 3px rgba(30,58,138,.1); }
 .ep-label { display:block; font-size:.75rem; font-weight:700; color:#4b5563; margin-bottom:.25rem; }
+
+/* ══════════════════════════════════════════════════════════
+   Insights panel — "read from your own record", not a bulleted
+   emoji list. Each row is labeled with the analytic dimension
+   it came from (structure = information here, not decoration),
+   and a small pulsing dot signals these are computed live from
+   the account's own data rather than static copy.
+═══════════════════════════════════════════════════════════ */
+.insights-panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 55%);
+}
+.insights-head {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #eef0f4;
+}
+.insights-mark {
+  width: 34px; height: 34px;
+  border-radius: .65rem;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #1e3a8a, #3854c4);
+  color: #fff;
+  box-shadow: 0 3px 8px rgba(30,58,138,.28);
+}
+.insights-title { font-size: .9375rem; font-weight: 800; color: #111827; line-height: 1.2; }
+.insights-sub   { font-size: .75rem; color: #9ca3af; margin-top: .1rem; }
+
+.insight-row {
+  display: flex;
+  gap: .85rem;
+  padding: .9rem 1.25rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+.insight-row:last-child { border-bottom: none; }
+.insight-chip {
+  width: 34px; height: 34px;
+  border-radius: .6rem;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.insight-eyebrow {
+  font-size: .625rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.insight-text {
+  font-size: .8125rem;
+  color: #374151;
+  margin-top: .15rem;
+  line-height: 1.45;
+}
+.insights-empty {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: .5rem;
+  padding: 2.25rem 1.5rem;
+  color: #9ca3af;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .insights-live-dot { animation: none; }
+}
 </style>
 {% endblock %}
 
@@ -391,16 +455,111 @@
           </div>
         </div>
 
-        <!-- Insights -->
+        <!-- ══════════════════════════════════════════════════════
+             Insights — computed from the account's own activity,
+             each row labeled with the analytic dimension it reads
+             from rather than a plain emoji bullet list.
+        ═══════════════════════════════════════════════════════ -->
         <div class="mb-8">
           <h3 class="text-base font-bold text-gray-800 mb-3">Insights</h3>
-          <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2.5">
-            {% for insight in insights %}
-            <div class="insight-item">
-              <span class="text-base flex-shrink-0">{{ insight.icon }}</span>
-              <p class="text-sm text-gray-700">{{ insight.text }}</p>
+
+          <div class="insights-panel">
+            <div class="insights-head">
+              <span class="insights-mark">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a4 4 0 115.657 0M9.879 16.121A3 3 0 1014.12 16.12"/>
+                </svg>
+              </span>
+              <div>
+                <p class="insights-title">Insights</p>
+                <p class="insights-sub">Patterns read from your grievance &amp; notice activity</p>
+              </div>
             </div>
+
+            {% if insights %}
+            {% for insight in insights %}
+            {% if insight.icon == "🛣️" %}
+              {% with chip_bg="bg-amber-50" chip_fg="text-amber-600" eyebrow_fg="text-amber-600" eyebrow="Top Category" %}
+              <div class="insight-row">
+                <span class="insight-chip {{ chip_bg }}">
+                  <svg class="h-4 w-4 {{ chip_fg }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                  </svg>
+                </span>
+                <div class="min-w-0">
+                  <p class="insight-eyebrow {{ eyebrow_fg }}">{{ eyebrow }}</p>
+                  <p class="insight-text">{{ insight.text }}</p>
+                </div>
+              </div>
+              {% endwith %}
+            {% elif insight.icon == "✅" %}
+              {% with chip_bg="bg-green-50" chip_fg="text-green-600" eyebrow_fg="text-green-600" eyebrow="Resolution Rate" %}
+              <div class="insight-row">
+                <span class="insight-chip {{ chip_bg }}">
+                  <svg class="h-4 w-4 {{ chip_fg }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                </span>
+                <div class="min-w-0">
+                  <p class="insight-eyebrow {{ eyebrow_fg }}">{{ eyebrow }}</p>
+                  <p class="insight-text">{{ insight.text }}</p>
+                </div>
+              </div>
+              {% endwith %}
+            {% elif insight.icon == "⏱️" %}
+              {% with chip_bg="bg-blue-50" chip_fg="text-brand-blue" eyebrow_fg="text-brand-blue" eyebrow="Response Time" %}
+              <div class="insight-row">
+                <span class="insight-chip {{ chip_bg }}">
+                  <svg class="h-4 w-4 {{ chip_fg }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                </span>
+                <div class="min-w-0">
+                  <p class="insight-eyebrow {{ eyebrow_fg }}">{{ eyebrow }}</p>
+                  <p class="insight-text">{{ insight.text }}</p>
+                </div>
+              </div>
+              {% endwith %}
+            {% elif insight.icon == "👀" %}
+              {% with chip_bg="bg-purple-50" chip_fg="text-purple-600" eyebrow_fg="text-purple-600" eyebrow="Notice Interest" %}
+              <div class="insight-row">
+                <span class="insight-chip {{ chip_bg }}">
+                  <svg class="h-4 w-4 {{ chip_fg }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                </span>
+                <div class="min-w-0">
+                  <p class="insight-eyebrow {{ eyebrow_fg }}">{{ eyebrow }}</p>
+                  <p class="insight-text">{{ insight.text }}</p>
+                </div>
+              </div>
+              {% endwith %}
+            {% else %}
+              {% with chip_bg="bg-gray-100" chip_fg="text-gray-500" eyebrow_fg="text-gray-500" eyebrow="Getting Started" %}
+              <div class="insight-row">
+                <span class="insight-chip {{ chip_bg }}">
+                  <svg class="h-4 w-4 {{ chip_fg }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                </span>
+                <div class="min-w-0">
+                  <p class="insight-eyebrow {{ eyebrow_fg }}">{{ eyebrow }}</p>
+                  <p class="insight-text">{{ insight.text }}</p>
+                </div>
+              </div>
+              {% endwith %}
+            {% endif %}
             {% endfor %}
+            {% else %}
+            <div class="insights-empty">
+              <svg class="h-8 w-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a4 4 0 115.657 0M9.879 16.121A3 3 0 1014.12 16.12"/>
+              </svg>
+              <p class="text-sm font-medium text-gray-500">Nothing to read yet.</p>
+              <p class="text-xs text-gray-400">Submit a grievance or browse notices and this panel fills in on its own.</p>
+            </div>
+            {% endif %}
           </div>
         </div>
 
@@ -746,11 +905,7 @@ function saveNotifSetting(key, val) {
   }).catch(function (e) { console.error('Failed to save setting', e); });
 }
 
-/* ── Avatar upload — now actually persists to the server ───────
-   Preview is shown immediately, then the file is uploaded via AJAX
-   to /api/profile/avatar/. On success, the returned avatar_url is
-   swapped in so the image matches what's actually stored; on
-   failure, the previous avatar is restored and an error is shown. */
+/* ── Avatar upload — persists to the server ─────────────────── */
 function handleAvatarChange(event) {
   var file = event.target.files && event.target.files[0];
   if (!file) return;
@@ -798,11 +953,9 @@ function handleAvatarChange(event) {
         if (!result.ok || !result.data.success) {
           throw new Error(result.data && result.data.error ? result.data.error : 'upload_failed');
         }
-        // Swap to the real stored URL (breaks the data: URL reference).
         img.src = result.data.avatar_url;
       })
       .catch(function () {
-        // Roll back to whatever was showing before this attempt.
         if (previousHidden) {
           img.classList.add('hidden');
           img.src = '';
