@@ -24,32 +24,32 @@
     cursor: not-allowed;
   }
 
-  .save-btn {
+.save-btn {
     position: absolute;
     top: 10px;
     right: 10px;
     background: transparent;
     border: none;
-    color: #ffffff;
+    color: #9ca3af; /* gray-400 */
     cursor: pointer;
     padding: 0;
-    transition: transform 0.15s ease;
+    transition: transform 0.15s ease, color 0.15s ease;
     line-height: 0;
     z-index: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-  }
-  .save-btn:hover { transform: scale(1.12); }
-  .save-btn svg { width: 18px; height: 18px; }
-  .save-btn.saved svg {
-    fill: #ffffff;
-    stroke: #ffffff;
-  }
-  .save-btn:not(.saved) svg {
+}
+.save-btn:hover { transform: scale(1.12); color: #1e3a8a; }
+.save-btn svg { width: 18px; height: 18px; }
+.save-btn.saved svg {
+    fill: #1e3a8a;
+    stroke: #1e3a8a;
+}
+.save-btn:not(.saved) svg {
     fill: none;
-    stroke: #ffffff;
-  }
+    stroke: currentColor;
+}
 
   #bm-toast {
     position: fixed;
@@ -135,7 +135,7 @@
   </div>
 
   <!-- Notice cards grid -->
-  <div id="notice-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 min-h-[240px]"></div>
+  <div id="notice-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
 
   <div id="notice-empty-state" class="hidden text-center py-20 text-gray-500">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300" fill="none"
@@ -208,8 +208,8 @@
         const nowSaved = !!data.saved;
         btn.classList.toggle('saved', nowSaved);
         const svg = btn.querySelector('svg');
-        svg.setAttribute('stroke', '#ffffff');
-        svg.setAttribute('fill', nowSaved ? '#ffffff' : 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('fill', nowSaved ? '#1e3a8a' : 'none');
         showToast(nowSaved ? `Saved "${title}"` : `Removed "${title}" from saved notices`);
         const notice = allNotices.find(n => n.id === id);
         if (notice) notice.is_saved = nowSaved;
@@ -257,14 +257,13 @@
               aria-label="${isSaved ? 'Remove saved notice' : 'Save this notice'}"
               title="${isSaved ? 'Remove save' : 'Save notice'}">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2"
-                   stroke="#ffffff" fill="${isSaved ? '#ffffff' : 'none'}">
+                  stroke="currentColor" fill="${isSaved ? '#1e3a8a' : 'none'}">
                 <path stroke-linecap="round" stroke-linejoin="round"
                       d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
               </svg>
             </button>
             <a href="/notices/${notice.id}/" class="block cursor-pointer">
-              <div class="h-20 bg-brand-blue relative overflow-hidden"></div>
-              <div class="p-4">
+              <div class="p-4 pr-10">
                 <span class="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full mb-2 ${notice.category_colour || 'bg-gray-100 text-gray-700'}">${notice.category_label || 'General Notice'}</span>
                 <p class="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">${notice.title}</p>
                 <p class="text-xs text-gray-500 mt-2">${notice.posted_at}</p>

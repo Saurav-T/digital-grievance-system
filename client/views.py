@@ -14,6 +14,7 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.http import require_POST
 
 from .models import (
+    GENDER_CHOICES,
     Grievance,
     GrievanceStatusHistory,
     JobListing,
@@ -83,11 +84,6 @@ def home(request):
 # =============================================================================
 
 def login_signup(request):
-    """
-    GET  -> render the combined login/signup page.
-    POST -> handle the LOGIN form only (form_type=login).
-    The signup form posts to its own endpoint (see signup_view below).
-    """
     if request.method == "POST" and request.POST.get("form_type") == "login":
         email = request.POST.get("email", "").strip().lower()
         password = request.POST.get("password", "")
@@ -105,7 +101,6 @@ def login_signup(request):
 
 
 def signup_view(request):
-    """Handles the multi-step signup wizard submission (POST only, single request)."""
     if request.method == "POST":
         full_name    = request.POST.get("full_name", "").strip()
         email        = request.POST.get("email", "").strip().lower()
@@ -181,14 +176,12 @@ def signup_view(request):
 
 
 def check_username(request):
-    """GET /api/check-username/?u=value -> {"valid_format": bool, "available": bool}"""
     u = request.GET.get("u", "").strip()
     valid_format = bool(re.match(r"^[a-zA-Z0-9_]{3,20}$", u))
     available = valid_format and not User.objects.filter(username__iexact=u).exists()
     return JsonResponse({"valid_format": valid_format, "available": available})
 
 def check_email(request):
-    """GET /api/check-email/?e=value -> {"valid_format": bool, "available": bool}"""
     e = request.GET.get("e", "").strip().lower()
     valid_format = bool(re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", e))
     available = valid_format and not User.objects.filter(email__iexact=e).exists()
@@ -196,7 +189,6 @@ def check_email(request):
 
 
 def check_phone(request):
-    """GET /api/check-phone/?p=value -> {"valid_format": bool, "available": bool}"""
     p = request.GET.get("p", "").strip()
     valid_format = len(re.sub(r"\D", "", p)) >= 10
     available = valid_format and not User.objects.filter(phone_number=p).exists()
@@ -251,7 +243,6 @@ def notices(request):
 def notice_detail(request, pk):
     notice = get_object_or_404(Notice, pk=pk)
 
-    # Track the view for the profile "Notice Interest Analysis" / activity chart
     if request.user.is_authenticated:
         NoticeView.objects.create(user=request.user, notice=notice)
 
@@ -389,16 +380,6 @@ def update_notification_setting(request):
 
 @login_required(login_url="login")
 def grievances(request):
-    """
-    GET  -> render the grievance submission form.
-    POST -> create a new Grievance for the logged-in user.
-
-    NOTE: `category` is now a plain CharField driven by
-    Grievance.CATEGORY_CHOICES / GRIEVANCE_CATEGORY_STYLES (see models.py),
-    matching the Notice.category pattern. The old Category FK + get_or_create
-    lookup has been removed — categories are fixed government-service slugs,
-    not freeform admin-created rows.
-    """
     if request.method == "POST":
         subject = request.POST.get("subject", "").strip()
         description = request.POST.get("description", "").strip()
@@ -492,11 +473,6 @@ def grievance_detail(request, pk):
 @login_required(login_url="login")
 @require_POST
 def grievance_manage(request):
-    """Single POST endpoint for the Track Grievances page's Edit/Delete
-    modals — same action-dispatch pattern as the admin panel's forms.
-    Only the owning user can edit/delete their own grievance, and only
-    while it's still Pending (once a staff member starts reviewing it,
-    changing or removing it would break the status history / audit trail)."""
     action = request.POST.get("action")
     grievance = get_object_or_404(Grievance, pk=request.POST.get("grievance_id"), user=request.user)
 
@@ -610,6 +586,7 @@ def job_detail(request, pk):
         "client/job_detail.html",
         {"job": job_payload, "recent_jobs": recent_payload},
     )
+
 
 @xframe_options_exempt
 def job_pdf(request, pk):
@@ -742,9 +719,6 @@ def profile(request):
         notice_series.append(notice_map.get(key, 0))
 
     # ── Category analytics (top 3) ───────────────────────────────────────
-    # `category` is now a CharField slug (e.g. "roads_infrastructure"), so
-    # we group on it directly and resolve the display label via
-    # grievance_category_meta rather than a related Category name.
     from .models import grievance_category_meta
 
     cat_qs = (
@@ -875,15 +849,23 @@ def profile(request):
         },
     ]
 
-    # ── Profile display data ──────────────────────────────────────────────
+    # ── Profile display + edit-form data ──────────────────────────────────
     profile_dict = {
         "name": user.get_full_name() or "User",
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "username": user.username or "",
         "email": user.email,
         "location": user.municipality or "—",
         "phone": user.phone_number or "—",
         "address": user.address or "—",
         "dob": user.dob.strftime("%d %b %Y") if user.dob else "—",
+        "dob_raw": user.dob.isoformat() if user.dob else "",
         "gender": user.gender or "—",
+        "gender_raw": user.gender or "",
+        "municipality_raw": user.municipality or "",
+        "address_raw": user.address or "",
+        "phone_raw": user.phone_number or "",
         "joined": user.date_joined.strftime("%B %Y"),
         "avatar_url": user.avatar_url,
     }
@@ -926,6 +908,7 @@ def profile(request):
         "saved_notices": saved_notices,
         "saved_jobs": saved_jobs,
         "notification_settings": notification_settings,
+        "gender_choices": GENDER_CHOICES,
 
         "grievances_total": total_grievances,
         "grievances_this_month": this_month_count,
@@ -945,19 +928,105 @@ def profile(request):
 
 
 @login_required(login_url="login")
+@require_POST
+def update_profile(request):
+    """Handles the full 'Edit Profile' modal submission."""
+    user = request.user
+
+    first_name  = request.POST.get("first_name", "").strip()
+    last_name   = request.POST.get("last_name", "").strip()
+    username    = request.POST.get("username", "").strip()
+    email       = request.POST.get("email", "").strip().lower()
+    phone       = request.POST.get("phone_number", "").strip()
+    dob         = request.POST.get("dob") or None
+    gender      = request.POST.get("gender", "")
+    address     = request.POST.get("address", "").strip()
+    municipality = request.POST.get("municipality", "").strip()
+
+    errors = []
+    if not first_name:
+        errors.append("First name is required.")
+    if not last_name:
+        errors.append("Last name is required.")
+
+    if not email or not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email):
+        errors.append("Please enter a valid email address.")
+    elif User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
+        errors.append("That email is already in use by another account.")
+
+    if username:
+        if not re.match(r"^[a-zA-Z0-9_]{3,20}$", username):
+            errors.append("Username must be 3–20 characters (letters, numbers, underscore only).")
+        elif User.objects.filter(username__iexact=username).exclude(pk=user.pk).exists():
+            errors.append("That username is already taken.")
+
+    if not phone:
+        errors.append("Phone number is required.")
+    elif User.objects.filter(phone_number=phone).exclude(pk=user.pk).exists():
+        errors.append("That phone number is already registered to another account.")
+
+    if not address:
+        errors.append("Address is required.")
+    if not municipality:
+        errors.append("Municipality / City is required.")
+
+    valid_genders = dict(GENDER_CHOICES)
+    if gender and gender not in valid_genders:
+        gender = ""
+
+    if errors:
+        for e in errors:
+            messages.error(request, e)
+        return redirect("profile")
+
+    user.first_name = first_name
+    user.last_name = last_name
+    if username:
+        user.username = username
+    user.email = email
+    user.phone_number = phone
+    user.dob = dob
+    user.gender = gender
+    user.address = address
+    user.municipality = municipality
+    user.save()
+
+    messages.success(request, "Profile updated successfully.")
+    return redirect("profile")
+
+
+@login_required(login_url="login")
+@require_POST
+def update_profile_avatar(request):
+    """AJAX endpoint used by the avatar picker on the profile page."""
+    file = request.FILES.get("profile_picture")
+    if not file:
+        return JsonResponse({"error": "no_file"}, status=400)
+    if not (file.content_type or "").startswith("image/"):
+        return JsonResponse({"error": "invalid_type"}, status=400)
+    if file.size > 5 * 1024 * 1024:
+        return JsonResponse({"error": "too_large"}, status=400)
+
+    user = request.user
+    # Clean up the old file so we don't leak storage on every re-upload.
+    if user.profile_picture:
+        try:
+            user.profile_picture.delete(save=False)
+        except Exception:
+            pass
+
+    user.profile_picture = file
+    user.save()
+    return JsonResponse({"success": True, "avatar_url": user.avatar_url})
+
+
+@login_required(login_url="login")
 def notifications(request):
-    """Renders the full notifications page. The list itself is fetched by
-    the page's own JS from /api/notifications/ so both this page and the
-    header dropdown always show the same, real, DB-backed data."""
     return render(request, "client/notifications.html")
 
 
 @login_required(login_url="login")
 def notifications_api(request):
-    """GET -> the current user's notifications (newest first) plus an
-    unread count, used by both the header bell dropdown and the full
-    /notifications/ page. Everything (search, type filter, unread-only,
-    pagination) is done client-side against this single payload."""
     qs = Notification.objects.filter(user=request.user).order_by("-created_at")[:300]
     data = [
         {

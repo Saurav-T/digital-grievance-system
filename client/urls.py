@@ -32,6 +32,7 @@ urlpatterns = [
 
     # ── Profile ──────────────────────────────────────────────
     path("profile/", views.profile, name="profile"),
+    path("profile/update/", views.update_profile, name="update_profile"),
     path("notifications/", views.notifications, name="notifications"),
 
     # ── AJAX / API endpoints ─────────────────────────────────
@@ -45,5 +46,6 @@ urlpatterns = [
     path("api/check-username/", views.check_username, name="check_username"),
     path("api/check-email/", views.check_email, name="check_email"),
     path("api/check-phone/", views.check_phone, name="check_phone"),
+    path("api/profile/avatar/", views.update_profile_avatar, name="update_profile_avatar"),
     path("grievances/manage/", views.grievance_manage, name="grievance_manage"),
 ]
