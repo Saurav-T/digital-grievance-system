@@ -3,12 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <style>
+    /* xhtml2pdf renders via ReportLab and only understands a subset of
+       CSS 2.1 — no flexbox/grid, no reliable <hr>, no white-space: pre-line.
+       DejaVu Sans (for Unicode/Devanagari support, e.g. Nepali names) is
+       only registered when generators.py actually found it on this
+       machine — see _pdf_font_context(). If it wasn't found, these blocks
+       render as nothing and the body just uses Helvetica. */
+    {% if pdf_font_regular %}
+    @font-face {
+        font-family: "DejaVu Sans";
+        src: url("{{ pdf_font_regular }}");
+    }
+    {% endif %}
+    {% if pdf_font_bold %}
+    @font-face {
+        font-family: "DejaVu Sans";
+        font-weight: bold;
+        src: url("{{ pdf_font_bold }}");
+    }
+    {% endif %}
+
     @page {
-        size: A4;
+        size: a4;
         margin: 2.5cm 3cm;
     }
     body {
-        font-family: "DejaVu Sans", Arial, sans-serif;
+        font-family: {% if pdf_font_regular %}"DejaVu Sans", {% endif %}Helvetica, sans-serif;
         color: #1f2937;
         font-size: 11pt;
         line-height: 1.5;
@@ -19,8 +39,6 @@
     }
     .logo {
         width: 25mm;   /* ← change this to resize the logo — same idea as LOGO_WIDTH_MM */
-        height: auto;
-        margin-bottom: 6px;
     }
     .gov-line {
         font-size: 10pt;
@@ -28,7 +46,7 @@
     }
     .ministry-name {
         font-size: 15pt;
-        font-weight: 700;
+        font-weight: bold;
         color: #1e3a8a;
         margin: 4px 0;
     }
@@ -36,18 +54,18 @@
         text-align: right;
         font-size: 9pt;
         color: #6b7280;
-        white-space: pre-line;
         margin-bottom: 10px;
     }
-    hr {
-        border: none;
+    .divider {
         border-top: 1px solid #9ca3af;
         margin: 14px 0;
+        font-size: 1px;
+        line-height: 1px;
     }
     .doc-title {
         text-align: center;
         font-size: 12pt;
-        font-weight: 700;
+        font-weight: bold;
         text-decoration: underline;
     }
     .doc-date {
@@ -56,7 +74,6 @@
         margin: 4px 0 20px;
     }
     .body-text {
-        white-space: pre-line;
         text-align: justify;
     }
 </style>
@@ -69,14 +86,14 @@
         <p class="ministry-name">{{ ministry_name }}</p>
     </div>
 
-    <p class="address">{{ address }}</p>
+    {% if address %}<p class="address">{{ address|linebreaksbr }}</p>{% endif %}
 
-    <hr>
+    <div class="divider">&nbsp;</div>
 
     <p class="doc-title">{{ title }}</p>
     <p class="doc-date">Date: {{ date }}</p>
 
-    <p class="body-text">{{ body }}</p>
+    <p class="body-text">{{ body|linebreaksbr }}</p>
 
 </body>
 </html>

@@ -6,7 +6,7 @@ Two independent, lightweight renderers — no LibreOffice, no office suite:
 - DOCX (for download) is rendered from a FIXED, hand-designed Word template
   via docxtpl.
 - PDF (for preview/print) is rendered straight from an HTML/CSS template
-  via WeasyPrint — it is NOT a conversion of the DOCX.
+  via xhtml2pdf — it is NOT a conversion of the DOCX.
 
 The DOCX templates are NOT built by this file — you design them yourself in
 Word / LibreOffice Writer and drop them at:
@@ -20,7 +20,10 @@ The PDF templates live at:
     client/templates/client/pdf/job_pdf.html
 
 Style each one independently — they just need to carry the same branding,
-not be byte-for-byte identical.
+not be byte-for-byte identical. Note that xhtml2pdf only understands a
+subset of CSS 2.1 (no flexbox/grid, limited <hr>/white-space support), so
+those two templates are written conservatively — plain block/table layout,
+inline styles kept simple. If you redesign them, keep that in mind.
 
 Anywhere you want dynamic text in those templates, type a Jinja
 placeholder as plain text, e.g. {{ title }}, {{ date }}, {{ body }}.
@@ -139,33 +142,151 @@ def _render_docx(template_path: str, context: dict) -> bytes:
     return buf.getvalue()
 
 
-# ─── PDF generation: WeasyPrint (HTML/CSS → PDF, no LibreOffice needed) ─────
+# ─── PDF generation: xhtml2pdf (HTML/CSS → PDF, no system libraries) ────────
 # The PDF is rendered independently from a small HTML template (see
 # client/templates/client/pdf/notice_pdf.html and job_pdf.html) rather than
-# by converting the .docx. This means: no LibreOffice subprocess, no ~600MB
-# office suite in your deployment image, no conversion startup lag, and no
-# silent failures from sandboxed/no-HOME server environments.
+# by converting the .docx. xhtml2pdf is pure Python, built on top of
+# ReportLab — there's no Cairo/Pango/GDK-Pixbuf to install at the OS level,
+# no subprocess, and it works fine in minimal/sandboxed server environments.
 #
 # You style the DOCX (for downloads) in Word, and the PDF (for
 # preview/print) in the HTML/CSS templates — they don't have to be
 # byte-for-byte identical, just carry the same branding.
+#
+# Trade-off vs WeasyPrint: xhtml2pdf only supports a subset of CSS 2.1
+# (no flexbox/grid; @page margin rules work but are simpler; things like
+# `white-space: pre-line` aren't reliable — templates use `linebreaksbr`
+# in Django instead). See the two pdf/*.html templates for the patterns
+# that render correctly.
 
 def _logo_file_uri() -> str:
-    """file:// URI WeasyPrint can load directly, or '' if the logo is missing."""
+    """file:// URI for the logo, or '' if the logo is missing. Resolved back
+    to a real filesystem path by _link_callback() below at render time."""
     if not os.path.exists(LOGO_PATH):
         return ""
     return "file://" + LOGO_PATH.replace(os.sep, "/")
 
 
+# ─── Unicode font (optional) ─────────────────────────────────────────────
+# xhtml2pdf's built-in Helvetica only covers Latin text. DejaVu Sans adds
+# Devanagari/wider Unicode coverage for things like Nepali names — but it's
+# an OS-level font, not something we ship, so its location varies (it's at
+# /usr/share/fonts/truetype/dejavu/... in the Docker image via
+# `apt-get install fonts-dejavu`, but usually isn't present at all on a
+# bare macOS/Windows dev machine running `manage.py runserver` directly).
+#
+# IMPORTANT: never hardcode a single path here — if it doesn't exist on
+# whichever machine is running the code, xhtml2pdf raises while parsing
+# @font-face and the whole PDF request crashes with a 500. Instead we
+# probe a handful of common locations and only tell the template about a
+# font-face rule when a real file was found; otherwise the PDF templates
+# just render with Helvetica, which always works.
+_DEJAVU_REGULAR_CANDIDATES = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",      # Debian/Ubuntu (this project's Dockerfile)
+    "/usr/share/fonts/dejavu/DejaVuSans.ttf",                # some RPM-based distros
+    "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",     # Fedora/RHEL
+    "/opt/homebrew/share/fonts/DejaVuSans.ttf",              # Homebrew on Apple Silicon
+    "/usr/local/share/fonts/DejaVuSans.ttf",                 # Homebrew on Intel Mac / manual install
+    "C:\\Windows\\Fonts\\DejaVuSans.ttf",                    # Windows, if manually installed
+]
+_DEJAVU_BOLD_CANDIDATES = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf",
+    "/opt/homebrew/share/fonts/DejaVuSans-Bold.ttf",
+    "/usr/local/share/fonts/DejaVuSans-Bold.ttf",
+    "C:\\Windows\\Fonts\\DejaVuSans-Bold.ttf",
+]
+
+
+def _first_existing(paths):
+    for path in paths:
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+def _pdf_font_context() -> dict:
+    """Returns absolute filesystem paths (already forward-slashed, no URI
+    scheme) for the templates to use in @font-face, or empty strings when
+    DejaVu isn't available anywhere — in which case the templates fall back
+    to Helvetica and nothing breaks."""
+    regular = _first_existing(_DEJAVU_REGULAR_CANDIDATES)
+    bold = _first_existing(_DEJAVU_BOLD_CANDIDATES)
+    return {
+        "pdf_font_regular": regular.replace(os.sep, "/") if regular else "",
+        "pdf_font_bold": bold.replace(os.sep, "/") if bold else "",
+    }
+
+
+def _link_callback(uri: str, rel: str) -> str:
+    """xhtml2pdf/ReportLab can't fetch http(s) or file:// URIs on their own —
+    every <img src="..."> (and CSS url(...)) has to be resolved to a real,
+    absolute path on disk before rendering. This is the standard xhtml2pdf
+    pattern for that: handle our own file:// logo URIs, plus anything
+    served from MEDIA_URL or STATIC_URL, and reject everything else so a
+    stray external URL fails loudly instead of silently producing a blank
+    image."""
+    if uri.startswith("file://"):
+        path = uri[len("file://"):]
+        # file:///C:/... on Windows leaves a leading slash before the drive
+        # letter — strip it so os.path checks work.
+        if os.name == "nt" and path.startswith("/") and ":" in path:
+            path = path.lstrip("/")
+        return path
+
+    if uri.startswith(settings.MEDIA_URL):
+        path = os.path.join(settings.MEDIA_ROOT, uri[len(settings.MEDIA_URL):])
+    elif uri.startswith(settings.STATIC_URL):
+        # No STATIC_ROOT is configured in settings.py (dev-only static
+        # serving), so fall back to each app's static/ dir the same way
+        # Django's staticfiles finders would.
+        candidate = os.path.join(settings.BASE_DIR, "client", "static", uri[len(settings.STATIC_URL):])
+        path = candidate
+    else:
+        # Absolute filesystem path already, or something we don't recognise
+        # — hand it back unchanged rather than guessing.
+        return uri
+
+    if not os.path.isfile(path):
+        logger.warning("PDF link_callback: could not resolve %r to a file (looked at %r)", uri, path)
+        return uri
+
+    return path
+
+
 def _render_pdf_from_html(template_name: str, context: dict) -> bytes:
     from django.template.loader import render_to_string
-    from weasyprint import HTML
+    from xhtml2pdf import pisa
 
     full_context = dict(context)
     full_context.setdefault("logo_url", _logo_file_uri())
+    full_context.update(_pdf_font_context())
 
     html_string = render_to_string(template_name, full_context)
-    return HTML(string=html_string).write_pdf()
+
+    buf = io.BytesIO()
+    try:
+        result = pisa.CreatePDF(
+            src=html_string,
+            dest=buf,
+            link_callback=_link_callback,
+            encoding="utf-8",
+        )
+    except Exception as exc:
+        # Never let a rendering hiccup (bad font, unreadable image, etc.)
+        # bubble up as an opaque 500 — log the real cause so it's easy to
+        # diagnose, then re-raise with a message that actually says what
+        # template was involved.
+        logger.exception("xhtml2pdf raised while rendering %s", template_name)
+        raise RuntimeError(f"xhtml2pdf raised while rendering {template_name}: {exc}") from exc
+
+    if result.err:
+        raise RuntimeError(
+            f"xhtml2pdf failed to render {template_name} "
+            f"({result.err} error(s) — check server logs for details)."
+        )
+    return buf.getvalue()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -186,7 +307,7 @@ def generate_notice_docx(context: dict) -> bytes:
 def generate_notice_pdf(context: dict) -> bytes:
     """
     Generate a Notice PDF directly from the HTML template — independent of
-    the DOCX / LibreOffice entirely.
+    the DOCX entirely.
     TODO (DB integration): pass notice model fields as context.
     """
     return _render_pdf_from_html("client/pdf/notice_pdf.html", context)
@@ -206,7 +327,7 @@ def generate_job_docx(context: dict) -> bytes:
 def generate_job_pdf(context: dict) -> bytes:
     """
     Generate a Job Listing PDF directly from the HTML template — independent
-    of the DOCX / LibreOffice entirely.
+    of the DOCX entirely.
     TODO (DB integration): pass job model fields as context.
     """
     return _render_pdf_from_html("client/pdf/job_pdf.html", context)
