@@ -544,6 +544,12 @@ def notify_all_citizens(ntype, title, body="", url="#", related_notice=None, rel
     }
     field = {"notice": "new_notices", "job": "new_job_listings"}.get(ntype, None)
 
+    # bulk_create() skips Model.save(), which is the only place auto_now_add
+    # actually populates created_at — so it must be set explicitly here or
+    # every row fails the NOT NULL constraint on created_at and the whole
+    # bulk_create() raises, silently dropping every notice/job notification.
+    now = timezone.now()
+
     to_create = []
     for u in citizens:
         pref = prefs_by_user.get(u.id)
@@ -552,6 +558,7 @@ def notify_all_citizens(ntype, title, body="", url="#", related_notice=None, rel
             to_create.append(Notification(
                 user=u, type=ntype, title=title[:255], body=(body or "")[:500], url=url or "#",
                 related_notice=related_notice, related_job=related_job,
+                created_at=now,
             ))
     if to_create:
         Notification.objects.bulk_create(to_create)
