@@ -1,8 +1,35 @@
 """
 client/generators.py
 ────────────────────
-Generates DOCX documents (via docxtpl) and converts them to PDF
-(via LibreOffice headless, with a reportlab fallback).
+Two independent, lightweight renderers — no LibreOffice, no office suite:
+
+- DOCX (for download) is rendered from a FIXED, hand-designed Word template
+  via docxtpl.
+- PDF (for preview/print) is rendered straight from an HTML/CSS template
+  via WeasyPrint — it is NOT a conversion of the DOCX.
+
+The DOCX templates are NOT built by this file — you design them yourself in
+Word / LibreOffice Writer and drop them at:
+
+    media/docx_templates/notice_template.docx
+    media/docx_templates/job_template.docx
+
+The PDF templates live at:
+
+    client/templates/client/pdf/notice_pdf.html
+    client/templates/client/pdf/job_pdf.html
+
+Style each one independently — they just need to carry the same branding,
+not be byte-for-byte identical.
+
+Anywhere you want dynamic text in those templates, type a Jinja
+placeholder as plain text, e.g. {{ title }}, {{ date }}, {{ body }}.
+
+For the logo: don't paste an image into the template. Instead type the
+placeholder {{ logo }} wherever you want the logo to appear (usually the
+header). At render time this file swaps that placeholder for a real
+image, sized exactly as configured in LOGO_WIDTH_MM below — that's the
+only way to control an inserted image's size dynamically with docxtpl.
 
 Usage example:
     from client.generators import generate_notice_pdf, generate_notice_docx
@@ -19,11 +46,28 @@ Usage example:
 """
 
 import io
+import logging
 import os
-import subprocess
-import tempfile
 
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Logo configuration
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Path to the logo image used to fill in the {{ logo }} placeholder.
+# Point this at whichever file you want — the static emblem, or something
+# in media/ if you want it editable without a redeploy.
+LOGO_PATH = os.path.join(settings.BASE_DIR, "client", "static", "client", "img", "emblem.png")
+
+# Custom size for the inserted logo. Only ONE of width/height needs to be
+# set for the aspect ratio to be preserved automatically by docxtpl/python-docx
+# — but you can set both if you want to force an exact box.
+LOGO_WIDTH_MM = 25   # ← change this to resize the logo everywhere at once
+LOGO_HEIGHT_MM = None  # leave as None to keep aspect ratio
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -44,282 +88,84 @@ def _job_template_path() -> str:
     return os.path.join(_template_dir(), "job_template.docx")
 
 
-# ─── DOCX template builders (python-docx, run once) ─────────────────────────
-
-def _build_notice_template(path: str) -> None:
-    """Create the notice .docx template with Jinja2 placeholders."""
-    from docx import Document
-    from docx.shared import Pt, Cm, RGBColor
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-
-    doc = Document()
-
-    # Page margins
-    for sec in doc.sections:
-        sec.top_margin    = Cm(2)
-        sec.bottom_margin = Cm(2)
-        sec.left_margin   = Cm(3)
-        sec.right_margin  = Cm(2.5)
-
-    # ── Header ────────────────────────────────────────────────
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run("Government of Nepal")
-    r.font.size = Pt(11)
-
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run("{{ministry_name}}")
-    r.font.size = Pt(15)
-    r.font.bold = True
-
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    r = p.add_run("{{address}}")
-    r.font.size = Pt(9)
-
-    doc.add_paragraph("")
-
-    # Horizontal rule via border paragraph style
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
-    p = doc.add_paragraph()
-    p_pr = p._p.get_or_add_pPr()
-    p_bdr = OxmlElement("w:pBdr")
-    bottom = OxmlElement("w:bottom")
-    bottom.set(qn("w:val"), "single")
-    bottom.set(qn("w:sz"), "6")
-    bottom.set(qn("w:space"), "4")
-    bottom.set(qn("w:color"), "888888")
-    p_bdr.append(bottom)
-    p_pr.append(p_bdr)
-
-    doc.add_paragraph("")
-
-    # ── Document title ────────────────────────────────────────
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run("{{title}}")
-    r.font.size = Pt(11)
-    r.font.bold = True
-    r.font.underline = True
-
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.add_run("Date: {{date}}")
-
-    doc.add_paragraph("")
-
-    # ── Body ─────────────────────────────────────────────────
-    doc.add_paragraph("{{body}}")
-
-    doc.save(path)
+def _require_template(path: str, label: str) -> None:
+    """Fail loudly (instead of silently generating a placeholder doc) if the
+    person hasn't dropped their fixed template file in place yet."""
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"{label} template not found at {path}. "
+            f"Design it in Word/LibreOffice and save it there — "
+            f"see the docstring at the top of client/generators.py."
+        )
 
 
-def _build_job_template(path: str) -> None:
-    """Create the job listing .docx template with Jinja2 placeholders."""
-    from docx import Document
-    from docx.shared import Pt, Cm
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
+def _build_logo_image(tpl):
+    """Returns an InlineImage bound to `tpl`, sized per LOGO_WIDTH_MM /
+    LOGO_HEIGHT_MM above. Returns None (and logs) if the logo file is missing,
+    so a missing logo never breaks document generation — the {{ logo }}
+    placeholder text just won't be replaced."""
+    from docxtpl import InlineImage
+    from docx.shared import Mm
 
-    doc = Document()
-    for sec in doc.sections:
-        sec.top_margin    = Cm(2)
-        sec.bottom_margin = Cm(2)
-        sec.left_margin   = Cm(3)
-        sec.right_margin  = Cm(2.5)
+    if not os.path.exists(LOGO_PATH):
+        return None
 
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.add_run("Government of Nepal").font.size = Pt(11)
+    kwargs = {}
+    if LOGO_WIDTH_MM:
+        kwargs["width"] = Mm(LOGO_WIDTH_MM)
+    if LOGO_HEIGHT_MM:
+        kwargs["height"] = Mm(LOGO_HEIGHT_MM)
 
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run("{{department}}")
-    r.font.size = Pt(15)
-    r.font.bold = True
-
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    p.add_run("{{location}}").font.size = Pt(9)
-
-    doc.add_paragraph("")
-
-    # HR
-    p = doc.add_paragraph()
-    ppr = p._p.get_or_add_pPr()
-    pbdr = OxmlElement("w:pBdr")
-    bot = OxmlElement("w:bottom")
-    bot.set(qn("w:val"), "single")
-    bot.set(qn("w:sz"), "6")
-    bot.set(qn("w:space"), "4")
-    bot.set(qn("w:color"), "888888")
-    pbdr.append(bot)
-    ppr.append(pbdr)
-
-    doc.add_paragraph("")
-
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run("{{title}}")
-    r.font.bold = True
-    r.font.underline = True
-
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.add_run("Date: {{date}}")
-
-    doc.add_paragraph("")
-
-    for label, var in [
-        ("",                       "{{description}}"),
-        ("Requirements: ",         "{{requirements}}"),
-        ("Age Requirement: ",      "{{age_requirement}}"),
-        ("Deadline: ",             "{{deadline}}"),
-        ("Contact Information: ",  "{{contact}}"),
-    ]:
-        p = doc.add_paragraph()
-        if label:
-            run = p.add_run(label)
-            run.font.bold = True
-        p.add_run(var)
-
-    doc.save(path)
+    return InlineImage(tpl, LOGO_PATH, **kwargs)
 
 
 # ─── DOCX rendering via docxtpl ──────────────────────────────────────────────
 
 def _render_docx(template_path: str, context: dict) -> bytes:
-    """Render a docxtpl template and return DOCX bytes."""
+    """Render a docxtpl template (fixed, hand-designed) and return DOCX bytes.
+    Automatically injects a sized `logo` InlineImage into the context so any
+    template containing {{ logo }} picks it up without the caller having to
+    remember to pass it."""
     from docxtpl import DocxTemplate
+
     tpl = DocxTemplate(template_path)
-    tpl.render(context)
+
+    full_context = dict(context)
+    full_context.setdefault("logo", _build_logo_image(tpl))
+
+    tpl.render(full_context)
     buf = io.BytesIO()
     tpl.save(buf)
     return buf.getvalue()
 
 
-# ─── PDF conversion: LibreOffice → reportlab fallback ────────────────────────
+# ─── PDF generation: WeasyPrint (HTML/CSS → PDF, no LibreOffice needed) ─────
+# The PDF is rendered independently from a small HTML template (see
+# client/templates/client/pdf/notice_pdf.html and job_pdf.html) rather than
+# by converting the .docx. This means: no LibreOffice subprocess, no ~600MB
+# office suite in your deployment image, no conversion startup lag, and no
+# silent failures from sandboxed/no-HOME server environments.
+#
+# You style the DOCX (for downloads) in Word, and the PDF (for
+# preview/print) in the HTML/CSS templates — they don't have to be
+# byte-for-byte identical, just carry the same branding.
 
-def _libreoffice_pdf(docx_bytes: bytes) -> bytes | None:
-    """Convert DOCX bytes to PDF using LibreOffice headless."""
-    lo = None
-    for candidate in ("libreoffice", "soffice"):
-        try:
-            res = subprocess.run(["which", candidate], capture_output=True, timeout=5)
-            if res.returncode == 0:
-                lo = candidate
-                break
-        except Exception:
-            pass
-
-    if not lo:
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            docx_path = os.path.join(tmpdir, "doc.docx")
-            with open(docx_path, "wb") as f:
-                f.write(docx_bytes)
-
-            res = subprocess.run(
-                [lo, "--headless", "--convert-to", "pdf", "--outdir", tmpdir, docx_path],
-                capture_output=True, timeout=60,
-            )
-            pdf_path = os.path.join(tmpdir, "doc.pdf")
-            if res.returncode == 0 and os.path.exists(pdf_path):
-                with open(pdf_path, "rb") as f:
-                    return f.read()
-    except Exception:
-        pass
-
-    return None
+def _logo_file_uri() -> str:
+    """file:// URI WeasyPrint can load directly, or '' if the logo is missing."""
+    if not os.path.exists(LOGO_PATH):
+        return ""
+    return "file://" + LOGO_PATH.replace(os.sep, "/")
 
 
-# ─── Reportlab fallbacks ─────────────────────────────────────────────────────
+def _render_pdf_from_html(template_name: str, context: dict) -> bytes:
+    from django.template.loader import render_to_string
+    from weasyprint import HTML
 
-def _notice_pdf_fallback(ctx: dict) -> bytes:
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import cm
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER, TA_RIGHT
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable
+    full_context = dict(context)
+    full_context.setdefault("logo_url", _logo_file_uri())
 
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4,
-                            topMargin=2*cm, bottomMargin=2*cm,
-                            leftMargin=3*cm, rightMargin=2.5*cm)
-    S = getSampleStyleSheet()
-    center  = ParagraphStyle("c", parent=S["Normal"], alignment=TA_CENTER)
-    right   = ParagraphStyle("r", parent=S["Normal"], alignment=TA_RIGHT, fontSize=9)
-    bold_c  = ParagraphStyle("bc", parent=center, fontName="Helvetica-Bold", fontSize=14)
-    ul_c    = ParagraphStyle("uc", parent=center, fontName="Helvetica-Bold",
-                              fontSize=11, underline=True)
-    normal  = S["Normal"]
-
-    story = [
-        Paragraph("Government of Nepal", center),
-        Spacer(1, .15*cm),
-        Paragraph(f"<b>{ctx.get('ministry_name','Ministry of Home Affairs')}</b>", bold_c),
-        Spacer(1, .2*cm),
-        Paragraph(ctx.get('address', 'Singhadurbar, Kathmandu, Nepal').replace('\n','<br/>'), right),
-        Spacer(1, .6*cm),
-        HRFlowable(width="100%", thickness=.5, color=colors.grey),
-        Spacer(1, .5*cm),
-        Paragraph(f"<b><u>{ctx.get('title','Notice')}</u></b>", center),
-        Spacer(1, .2*cm),
-        Paragraph(f"Date: {ctx.get('date','')}", center),
-        Spacer(1, .6*cm),
-        Paragraph(ctx.get('body','').replace('\n','<br/>'), normal),
-    ]
-    doc.build(story)
-    return buf.getvalue()
-
-
-def _job_pdf_fallback(ctx: dict) -> bytes:
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import cm
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER, TA_RIGHT
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable
-
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4,
-                            topMargin=2*cm, bottomMargin=2*cm,
-                            leftMargin=3*cm, rightMargin=2.5*cm)
-    S = getSampleStyleSheet()
-    center = ParagraphStyle("c",  parent=S["Normal"], alignment=TA_CENTER)
-    right  = ParagraphStyle("r",  parent=S["Normal"], alignment=TA_RIGHT, fontSize=9)
-    bold_c = ParagraphStyle("bc", parent=center, fontName="Helvetica-Bold", fontSize=14)
-    normal = S["Normal"]
-
-    story = [
-        Paragraph("Government of Nepal", center),
-        Spacer(1, .15*cm),
-        Paragraph(f"<b>{ctx.get('department','Ministry of Home Affairs')}</b>", bold_c),
-        Spacer(1, .2*cm),
-        Paragraph(ctx.get('location','Kathmandu, Nepal').replace('\n','<br/>'), right),
-        Spacer(1, .6*cm),
-        HRFlowable(width="100%", thickness=.5, color=colors.grey),
-        Spacer(1, .5*cm),
-        Paragraph(f"<b><u>{ctx.get('title','Job Listing')}</u></b>", center),
-        Spacer(1, .2*cm),
-        Paragraph(f"Date: {ctx.get('date','')}", center),
-        Spacer(1, .6*cm),
-        Paragraph(ctx.get('description','').replace('\n','<br/>'), normal),
-        Spacer(1, .3*cm),
-        Paragraph(f"<b>Requirements:</b> {ctx.get('requirements','')}", normal),
-        Paragraph(f"<b>Age Requirement:</b> {ctx.get('age_requirement','')}", normal),
-        Paragraph(f"<b>Deadline:</b> {ctx.get('deadline','')}", normal),
-        Spacer(1, .4*cm),
-        Paragraph(f"<b>Contact:</b> {ctx.get('contact','').replace(chr(10),'<br/>')}", normal),
-    ]
-    doc.build(story)
-    return buf.getvalue()
+    html_string = render_to_string(template_name, full_context)
+    return HTML(string=html_string).write_pdf()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -328,54 +174,39 @@ def _job_pdf_fallback(ctx: dict) -> bytes:
 
 def generate_notice_docx(context: dict) -> bytes:
     """
-    Generate a Notice DOCX via docxtpl.
+    Generate a Notice DOCX from the fixed template you designed at
+    media/docx_templates/notice_template.docx.
     TODO (DB integration): pass notice model fields as context.
     """
     tpl_path = _notice_template_path()
-    if not os.path.exists(tpl_path):
-        _build_notice_template(tpl_path)
+    _require_template(tpl_path, "Notice")
     return _render_docx(tpl_path, context)
 
 
 def generate_notice_pdf(context: dict) -> bytes:
     """
-    Generate a Notice PDF:
-      1. Render DOCX via docxtpl
-      2. Convert with LibreOffice headless
-      3. Fall back to reportlab if LibreOffice unavailable/fails
+    Generate a Notice PDF directly from the HTML template — independent of
+    the DOCX / LibreOffice entirely.
     TODO (DB integration): pass notice model fields as context.
     """
-    try:
-        docx_bytes = generate_notice_docx(context)
-        pdf = _libreoffice_pdf(docx_bytes)
-        if pdf:
-            return pdf
-    except Exception:
-        pass
-    return _notice_pdf_fallback(context)
+    return _render_pdf_from_html("client/pdf/notice_pdf.html", context)
 
 
 def generate_job_docx(context: dict) -> bytes:
     """
-    Generate a Job Listing DOCX via docxtpl.
+    Generate a Job Listing DOCX from the fixed template you designed at
+    media/docx_templates/job_template.docx.
     TODO (DB integration): pass job model fields as context.
     """
     tpl_path = _job_template_path()
-    if not os.path.exists(tpl_path):
-        _build_job_template(tpl_path)
+    _require_template(tpl_path, "Job listing")
     return _render_docx(tpl_path, context)
 
 
 def generate_job_pdf(context: dict) -> bytes:
     """
-    Generate a Job Listing PDF.
+    Generate a Job Listing PDF directly from the HTML template — independent
+    of the DOCX / LibreOffice entirely.
     TODO (DB integration): pass job model fields as context.
     """
-    try:
-        docx_bytes = generate_job_docx(context)
-        pdf = _libreoffice_pdf(docx_bytes)
-        if pdf:
-            return pdf
-    except Exception:
-        pass
-    return _job_pdf_fallback(context)
+    return _render_pdf_from_html("client/pdf/job_pdf.html", context)

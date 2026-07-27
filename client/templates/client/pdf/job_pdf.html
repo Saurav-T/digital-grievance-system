@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+    @page {
+        size: A4;
+        margin: 2.5cm 3cm;
+    }
+    body {
+        font-family: "DejaVu Sans", Arial, sans-serif;
+        color: #1f2937;
+        font-size: 11pt;
+        line-height: 1.5;
+    }
+    .letterhead {
+        text-align: center;
+        margin-bottom: 18px;
+    }
+    .logo {
+        width: 25mm;
+        height: auto;
+        margin-bottom: 6px;
+    }
+    .gov-line {
+        font-size: 10pt;
+        color: #374151;
+    }
+    .dept-name {
+        font-size: 15pt;
+        font-weight: 700;
+        color: #1e3a8a;
+        margin: 4px 0;
+    }
+    .location {
+        text-align: right;
+        font-size: 9pt;
+        color: #6b7280;
+        margin-bottom: 10px;
+    }
+    hr {
+        border: none;
+        border-top: 1px solid #9ca3af;
+        margin: 14px 0;
+    }
+    .doc-title {
+        text-align: center;
+        font-size: 12pt;
+        font-weight: 700;
+        text-decoration: underline;
+    }
+    .doc-date {
+        text-align: center;
+        font-size: 10pt;
+        margin: 4px 0 20px;
+    }
+    .section-label {
+        font-weight: 700;
+        margin-top: 14px;
+    }
+    .body-text {
+        white-space: pre-line;
+        text-align: justify;
+    }
+</style>
+</head>
+<body>
+
+    <div class="letterhead">
+        {% if logo_url %}<img class="logo" src="{{ logo_url }}" alt="Emblem">{% endif %}
+        <p class="gov-line">Government of Nepal</p>
+        <p class="dept-name">{{ department }}</p>
+    </div>
+
+    <p class="location">{{ location }}</p>
+
+    <hr>
+
+    <p class="doc-title">{{ title }}</p>
+    <p class="doc-date">Date: {{ date }}</p>
+
+    <p class="body-text">{{ description }}</p>
+
+    <p class="section-label">Requirements:</p>
+    <p class="body-text">{{ requirements }}</p>
+
+    <p class="section-label">Age Requirement:</p>
+    <p class="body-text">{{ age_requirement }}</p>
+
+    <p class="section-label">Deadline:</p>
+    <p class="body-text">{{ deadline }}</p>
+
+    <p class="section-label">Contact Information:</p>
+    <p class="body-text">{{ contact }}</p>
+
+</body>
+</html>

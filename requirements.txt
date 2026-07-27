@@ -7,8 +7,27 @@ Django==5.1.4
 
 # PDF & Document Generation
 reportlab==4.4.1
+# Still used directly in server/views.py (grievance_pdf) for the admin
+# grievance report — NOT used for notice/job PDFs anymore, those moved to
+# WeasyPrint (see below).
+
 python-docx==1.1.2
+# Used by docxtpl under the hood, and directly in client/generators.py for
+# sizing the logo (docx.shared.Mm).
+
 docxtpl==0.16.2
+# Renders the fixed .docx templates (media/docx_templates/*.docx) for
+# notice/job downloads.
+
+weasyprint==69.0
+# Renders notice/job PDFs directly from HTML/CSS templates
+# (client/templates/client/pdf/*.html) — replaces the old
+# host machine (NOT installed via pip):
+#   macOS:   brew install pango cairo gdk-pixbuf libffi
+#   Debian/Ubuntu: apt-get install --no-install-recommends \
+#                  libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 \
+#                  libffi-dev libjpeg-dev
+# See: https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
 
 # Image handling (required for ImageField)
 Pillow==11.3.0
