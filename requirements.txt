@@ -34,3 +34,5 @@ html5lib==1.1
 # Image handling (required for ImageField, and used by reportlab/xhtml2pdf
 # for embedding raster images into generated PDFs)
 Pillow==11.3.0
+
+django-browser-reload==1.18.0
