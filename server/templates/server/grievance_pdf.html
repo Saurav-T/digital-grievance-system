@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  /* ── Page setup (xhtml2pdf compatible) ───────────────────── */
+  @page {
+    size: A4 portrait;
+    margin: 1.8cm 2cm 2.2cm 2cm;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 9.5pt;
+    color: #1e293b;
+    line-height: 1.5;
+    background: #fff;
+  }
+
+  /* ── Header band ─────────────────────────────────────────── */
+  .header {
+    background-color: #1e3a8a;
+    color: #fff;
+    padding: 14pt 18pt 12pt;
+    margin-bottom: 16pt;
+  }
+  .header-top {
+    width: 100%;
+  }
+  .header-left { display: inline-block; width: 72%; vertical-align: top; }
+  .header-right { display: inline-block; width: 26%; vertical-align: top; text-align: right; }
+  .header-org {
+    font-size: 7pt;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #93c5fd;
+    margin-bottom: 3pt;
+  }
+  .header-title {
+    font-size: 17pt;
+    font-weight: bold;
+  }
+  .header-subtitle {
+    font-size: 8pt;
+    color: #bfdbfe;
+    margin-top: 2pt;
+  }
+  .header-id-box {
+    display: inline-block;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 6pt 12pt;
+    text-align: center;
+  }
+  .header-id-label { font-size: 6.5pt; text-transform: uppercase; letter-spacing: 0.1em; color: #93c5fd; }
+  .header-id-value { font-size: 20pt; font-weight: bold; color: #fff; }
+
+  .header-meta {
+    border-top: 1px solid rgba(255,255,255,0.2);
+    margin-top: 10pt;
+    padding-top: 8pt;
+  }
+  .header-meta table { width: 100%; border-collapse: collapse; }
+  .header-meta td { font-size: 7.5pt; color: #bfdbfe; padding: 0 8pt 0 0; }
+  .header-meta strong { color: #fff; }
+
+  /* ── Section heading ─────────────────────────────────────── */
+  .section-head {
+    font-size: 7pt;
+    font-weight: bold;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #1e3a8a;
+    border-bottom: 1.5pt solid #1e3a8a;
+    padding-bottom: 3pt;
+    margin-bottom: 8pt;
+    margin-top: 16pt;
+  }
+
+  /* ── Info grid ───────────────────────────────────────────── */
+  .info-grid {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 4pt;
+  }
+  .info-grid td {
+    padding: 5pt 8pt;
+    vertical-align: top;
+    font-size: 8.5pt;
+  }
+  .info-grid tr:nth-child(odd)  td { background: #f8fafc; }
+  .info-grid tr:nth-child(even) td { background: #fff; }
+  .info-grid .lbl { color: #64748b; font-weight: bold; width: 22%; white-space: nowrap; }
+  .info-grid .val { color: #1e293b; width: 28%; }
+
+  /* ── Badges ──────────────────────────────────────────────── */
+  .badge {
+    display: inline;
+    padding: 2pt 6pt;
+    font-size: 7.5pt;
+    font-weight: bold;
+  }
+  .badge-pending   { background: #dbeafe; color: #1d4ed8; }
+  .badge-inreview  { background: #fef9c3; color: #92400e; }
+  .badge-resolved  { background: #dcfce7; color: #15803d; }
+  .badge-rejected  { background: #fee2e2; color: #b91c1c; }
+  .badge-low       { background: #dcfce7; color: #15803d; }
+  .badge-medium    { background: #fef9c3; color: #92400e; }
+  .badge-high      { background: #ffedd5; color: #c2410c; }
+  .badge-critical  { background: #fee2e2; color: #b91c1c; }
+
+  /* ── Text blocks ─────────────────────────────────────────── */
+  .text-block {
+    background: #f8fafc;
+    border-left: 3pt solid #1e3a8a;
+    padding: 8pt 11pt;
+    font-size: 9pt;
+    color: #334155;
+    margin-bottom: 4pt;
+  }
+  .note-block {
+    background: #f0fdf4;
+    border-left: 3pt solid #16a34a;
+    padding: 8pt 11pt;
+    font-size: 9pt;
+    color: #14532d;
+    margin-bottom: 4pt;
+  }
+  .reject-block {
+    background: #fef2f2;
+    border-left: 3pt solid #dc2626;
+    padding: 8pt 11pt;
+    font-size: 9pt;
+    color: #7f1d1d;
+    margin-bottom: 4pt;
+  }
+
+  /* ── Timeline table ──────────────────────────────────────── */
+  .timeline { width: 100%; border-collapse: collapse; }
+  .timeline th {
+    background: #f1f5f9;
+    font-size: 7pt;
+    font-weight: bold;
+    color: #64748b;
+    padding: 5pt 7pt;
+    text-align: left;
+    border-bottom: 1pt solid #e2e8f0;
+  }
+  .timeline td {
+    padding: 6pt 7pt;
+    vertical-align: top;
+    font-size: 8pt;
+    border-bottom: 0.5pt solid #e2e8f0;
+    color: #334155;
+  }
+  .timeline tr:last-child td { border-bottom: none; }
+  .tl-num { text-align: center; width: 20pt; font-weight: bold; color: #1e3a8a; }
+  .tl-status { width: 18%; font-weight: bold; }
+  .tl-when   { width: 26%; color: #64748b; }
+  .tl-by     { width: 20%; }
+  .tl-remark { color: #64748b; font-style: italic; }
+
+  /* ── Signature block ─────────────────────────────────────── */
+  .sig-table { width: 100%; border-collapse: collapse; margin-top: 26pt; }
+  .sig-table td { width: 50%; padding: 0; vertical-align: bottom; font-size: 8pt; color: #475569; }
+  .sig-line {
+    border-top: 0.75pt solid #94a3b8;
+    padding-top: 4pt;
+    margin-top: 22pt;
+    font-size: 7.5pt;
+    color: #64748b;
+  }
+
+  /* ── Doc footer ──────────────────────────────────────────── */
+  .doc-footer {
+    margin-top: 20pt;
+    border-top: 0.5pt solid #cbd5e1;
+    padding-top: 6pt;
+    font-size: 7pt;
+    color: #94a3b8;
+    width: 100%;
+  }
+  .doc-footer table { width: 100%; border-collapse: collapse; }
+  .doc-footer td { font-size: 7pt; color: #94a3b8; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ HEADER ══ -->
+<div class="header">
+  <div class="header-top">
+    <div class="header-left">
+      <div class="header-org">Digital Grievance &amp; Notice Board System &middot; Nepal</div>
+      <div class="header-title">Grievance Report</div>
+      <div class="header-subtitle">Official Document &mdash; Confidential</div>
+    </div>
+    <div class="header-right">
+      <div class="header-id-box">
+        <div class="header-id-label">Grievance No.</div>
+        <div class="header-id-value">#{{ g.id }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="header-meta">
+    <table>
+      <tr>
+        <td>Filed: <strong>{{ g.created_at|date:"d M Y, g:i A" }}</strong></td>
+        <td>
+          Status: <strong>{{ g.status }}</strong>
+        </td>
+        <td>
+          Priority: <strong>{{ g.priority }}</strong>
+        </td>
+        <td style="text-align:right; color:#93c5fd;">
+          Printed: <strong style="color:#fff;">{{ generated_at }}</strong>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+
+<!-- ══════════════════ COMPLAINANT ══ -->
+<div class="section-head">Complainant Information</div>
+<table class="info-grid">
+  <tr>
+    <td class="lbl">Full Name</td>
+    <td class="val">{{ g.user.get_full_name }}</td>
+    <td class="lbl">Email</td>
+    <td class="val">{{ g.user.email }}</td>
+  </tr>
+  <tr>
+    <td class="lbl">Phone</td>
+    <td class="val">{{ g.user.phone_number|default:"&mdash;" }}</td>
+    <td class="lbl">Address</td>
+    <td class="val">{{ g.user.address|default:"&mdash;" }}</td>
+  </tr>
+  <tr>
+    <td class="lbl">Municipality</td>
+    <td class="val">{{ g.user.municipality|default:"&mdash;" }}</td>
+    <td class="lbl">Gender</td>
+    <td class="val">{{ g.user.gender|default:"&mdash;" }}</td>
+  </tr>
+</table>
+
+
+<!-- ══════════════════ GRIEVANCE DETAILS ══ -->
+<div class="section-head">Grievance Details</div>
+<table class="info-grid">
+  <tr>
+    <td class="lbl">Subject</td>
+    <td class="val" colspan="3"><strong>{{ g.subject }}</strong></td>
+  </tr>
+  <tr>
+    <td class="lbl">Category</td>
+    <td class="val">{{ g.get_category_display|default:g.category|default:"Uncategorised" }}</td>
+    <td class="lbl">Date Filed</td>
+    <td class="val">{{ g.created_at|date:"d F Y, g:i A" }}</td>
+  </tr>
+  <tr>
+    <td class="lbl">Priority</td>
+    <td class="val">
+      <span class="badge {% if g.priority == 'Low' %}badge-low{% elif g.priority == 'Medium' %}badge-medium{% elif g.priority == 'High' %}badge-high{% else %}badge-critical{% endif %}">
+        {{ g.priority }}
+      </span>
+    </td>
+    <td class="lbl">Status</td>
+    <td class="val">
+      <span class="badge {% if g.status == 'Pending' %}badge-pending{% elif g.status == 'In Review' %}badge-inreview{% elif g.status == 'Resolved' %}badge-resolved{% else %}badge-rejected{% endif %}">
+        {{ g.status }}
+      </span>
+    </td>
+  </tr>
+  {% if g.location_url %}
+  <tr>
+    <td class="lbl">Location</td>
+    <td class="val" colspan="3">{{ g.location_url }}</td>
+  </tr>
+  {% endif %}
+  {% if g.is_spam %}
+  <tr>
+    <td class="lbl">Spam Flag</td>
+    <td class="val" colspan="3">
+      <span class="badge" style="background:#fef9c3;color:#78350f;">
+        Flagged as Spam &mdash; Score {{ g.spam_score|floatformat:1 }}%
+      </span>
+    </td>
+  </tr>
+  {% endif %}
+</table>
+
+
+<!-- ══════════════════ DESCRIPTION ══ -->
+<div class="section-head">Description</div>
+<div class="text-block">{{ g.description }}</div>
+
+{% if g.attachment %}
+<p style="font-size:8pt;color:#64748b;margin-top:4pt;">
+  Attachment submitted &mdash; reference: {{ g.attachment.url }}
+</p>
+{% endif %}
+
+
+<!-- ══════════════════ RESOLUTION / REJECTION ══ -->
+{% if g.status == 'Resolved' and g.resolution_note %}
+<div class="section-head">Resolution Details</div>
+<div class="note-block">{{ g.resolution_note }}</div>
+{% if g.resolved_at %}
+<p style="font-size:8pt;color:#15803d;margin-top:4pt;">
+  Resolved on {{ g.resolved_at|date:"d F Y, g:i A" }}
+</p>
+{% endif %}
+{% endif %}
+
+{% if g.status == 'Rejected' and g.resolution_note %}
+<div class="section-head">Rejection Reason</div>
+<div class="reject-block">{{ g.resolution_note }}</div>
+{% if g.rejected_at %}
+<p style="font-size:8pt;color:#b91c1c;margin-top:4pt;">
+  Rejected on {{ g.rejected_at|date:"d F Y, g:i A" }}
+</p>
+{% endif %}
+{% endif %}
+
+
+<!-- ══════════════════ TIMELINE ══ -->
+{% if history %}
+<div class="section-head">Status Timeline</div>
+<table class="timeline">
+  <tr>
+    <th style="width:20pt;">#</th>
+    <th class="tl-status">Status</th>
+    <th class="tl-when">Date &amp; Time</th>
+    <th class="tl-by">Updated By</th>
+    <th class="tl-remark">Remarks</th>
+  </tr>
+  {% for h in history %}
+  <tr>
+    <td class="tl-num">{{ forloop.counter }}</td>
+    <td class="tl-status">
+      <span class="badge {% if h.status == 'Pending' %}badge-pending{% elif h.status == 'In Review' %}badge-inreview{% elif h.status == 'Resolved' %}badge-resolved{% else %}badge-rejected{% endif %}">
+        {{ h.status }}
+      </span>
+    </td>
+    <td class="tl-when">{{ h.updated_at|date:"d M Y, g:i A" }}</td>
+    <td class="tl-by">{{ h.updated_by.get_full_name|default:"System" }}</td>
+    <td class="tl-remark">{{ h.remarks|default:"&mdash;" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+
+<!-- ══════════════════ SIGNATURE ══ -->
+<table class="sig-table">
+  <tr>
+    <td>
+      <div class="sig-line">
+        Complainant Signature<br>
+        <strong>{{ g.user.get_full_name }}</strong>
+      </div>
+    </td>
+    <td style="text-align:right;">
+      <div class="sig-line" style="text-align:right;">
+        Authorised Officer<br>
+        <strong>Digital Grievance System</strong>
+      </div>
+    </td>
+  </tr>
+</table>
+
+
+<!-- ══════════════════ FOOTER ══ -->
+<div class="doc-footer">
+  <table>
+    <tr>
+      <td>Grievance #{{ g.id }} &mdash; {{ g.subject|truncatechars:55 }}</td>
+      <td style="text-align:right;">Digital Grievance &amp; Notice Board System &middot; Nepal</td>
+    </tr>
+  </table>
+</div>
+
+</body>
+</html>

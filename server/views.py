@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.template.loader import render_to_string
 
 from client.models import (
     Grievance, GrievanceStatusHistory, JobListing, Notice, User,
@@ -514,84 +515,59 @@ def grievance_json(request, pk):
         ],
     })
 
-
+@staff_required
 def grievance_pdf(request, pk):
+    """
+    Render grievance_pdf.html → xhtml2pdf → inline PDF response.
+    Falls back with a clear error message if xhtml2pdf is not installed.
+    """
     try:
-        from reportlab.lib import colors
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import cm
-        from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+        from xhtml2pdf import pisa
     except ImportError:
-        messages.error(request, "PDF requires: pip install reportlab")
-        return redirect("admin_panel:grievances")
-
-    g = get_object_or_404(Grievance.objects.select_related("user"), pk=pk)
+        return HttpResponse(
+            "<h2 style='font-family:sans-serif;color:#b91c1c;padding:2rem'>"
+            "xhtml2pdf is not installed.<br>"
+            "Run: <code>pip install xhtml2pdf</code> then restart the server.</h2>",
+            status=500,
+        )
+ 
+    g = get_object_or_404(
+        Grievance.objects.select_related("user"),
+        pk=pk,
+    )
     history = g.status_history.select_related("updated_by").order_by("updated_at")
-
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm,
-                            leftMargin=2.5*cm, rightMargin=2.5*cm)
-    styles = getSampleStyleSheet()
-    bold = ParagraphStyle("bold", parent=styles["Normal"], fontName="Helvetica-Bold")
-    story = []
-
-    story.append(Paragraph(f"Grievance Report — #{g.id}", styles["Title"]))
-    story.append(Spacer(1, 0.4*cm))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
-    story.append(Spacer(1, 0.4*cm))
-
-    meta = [
-        ["Subject", g.subject],
-        ["Submitted By", g.user.get_full_name() + f" ({g.user.email})"],
-        ["Category", g.category_label],
-        ["Priority", g.priority],
-        ["Status", g.status],
-        ["Date Filed", g.created_at.strftime("%d %b %Y, %I:%M %p")],
-        ["Spam Score", f"{g.spam_score:.1f}%"],
-    ]
-    tbl = Table([[Paragraph(r[0], bold), Paragraph(r[1], styles["Normal"])] for r in meta],
-                colWidths=[4*cm, 12.5*cm])
-    tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (0,-1), colors.HexColor("#dbeafe")),
-        ("GRID", (0,0), (-1,-1), 0.4, colors.lightgrey),
-        ("VALIGN", (0,0), (-1,-1), "TOP"),
-        ("PADDING", (0,0), (-1,-1), 5),
-    ]))
-    story += [tbl, Spacer(1, 0.6*cm)]
-
-    story.append(Paragraph("Description", bold))
-    story.append(Spacer(1, 0.2*cm))
-    story.append(Paragraph(g.description.replace("\n", "<br/>"), styles["Normal"]))
-    story.append(Spacer(1, 0.5*cm))
-
-    if g.resolution_note:
-        story.append(Paragraph("Resolution / Rejection Note", bold))
-        story.append(Spacer(1, 0.2*cm))
-        story.append(Paragraph(g.resolution_note.replace("\n", "<br/>"), styles["Normal"]))
-        story.append(Spacer(1, 0.5*cm))
-
-    if g.location_url:
-        story.append(Paragraph("Location URL", bold))
-        story.append(Paragraph(g.location_url, styles["Normal"]))
-        story.append(Spacer(1, 0.5*cm))
-
-    if history.exists():
-        story.append(Paragraph("Status Timeline", bold))
-        story.append(Spacer(1, 0.2*cm))
-        for h in history:
-            by = h.updated_by.get_full_name() if h.updated_by else "System"
-            line = f"<b>{h.status}</b> — {h.updated_at.strftime('%d %b %Y %I:%M %p')} by {by}"
-            if h.remarks:
-                line += f"<br/><i>{h.remarks}</i>"
-            story.append(Paragraph(line, styles["Normal"]))
-            story.append(Spacer(1, 0.15*cm))
-
-    doc.build(story)
-    buf.seek(0)
-    resp = HttpResponse(buf, content_type="application/pdf")
-    resp["Content-Disposition"] = f'attachment; filename="grievance_{g.id}.pdf"'
-    return resp
+ 
+    # Render the HTML template to a string
+    html_string = render_to_string(
+        "server/grievance_pdf.html",
+        {
+            "g":            g,
+            "history":      history,
+            "generated_at": timezone.localtime(timezone.now()).strftime("%d %B %Y, %I:%M %p"),
+        },
+    )
+ 
+    # Convert to PDF in memory
+    pdf_buffer = io.BytesIO()
+    result = pisa.CreatePDF(
+        src=io.StringIO(html_string),
+        dest=pdf_buffer,
+        encoding="utf-8",
+    )
+ 
+    if result.err:
+        return HttpResponse(
+            f"<p style='font-family:sans-serif;color:#b91c1c;padding:2rem'>"
+            f"PDF generation error (xhtml2pdf): {result.err}</p>",
+            status=500,
+        )
+ 
+    pdf_buffer.seek(0)
+    response = HttpResponse(pdf_buffer, content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'inline; filename="grievance_{g.id}_{g.user.last_name}.pdf"'
+    )
+    return response
 
 
 @staff_required
