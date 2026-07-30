@@ -182,19 +182,13 @@
           <!-- ══ Image gallery ══ -->
           <div class="mt-6">
             <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Images</h3>
-            {% if grievance.attachment %}
+            {% if attachments %}
             <div class="gallery-scroll">
-              <!-- Grievance.attachment is currently a single ImageField.
-                   Once you add a GrievanceAttachment model with a FK back
-                   to Grievance, swap this for:
-                   {% for a in grievance.images.all %}
-                     <button type="button" onclick="openLightbox('{{ a.image.url }}')" class="gallery-item">
-                       <img src="{{ a.image.url }}" alt="Grievance attachment">
-                     </button>
-                   {% endfor %} -->
-              <button type="button" onclick="openLightbox('{{ grievance.attachment.url }}')" class="gallery-item">
-                <img src="{{ grievance.attachment.url }}" alt="Grievance attachment">
+              {% for a in attachments %}
+              <button type="button" onclick="openLightbox('{{ a.image.url }}')" class="gallery-item">
+                <img src="{{ a.file.url }}" alt="Grievance attachment {{ forloop.counter }}">
               </button>
+              {% endfor %}
             </div>
             {% else %}
             <div class="flex items-center gap-2 text-sm text-gray-400 bg-gray-50 border border-dashed border-gray-200 rounded-xl py-4 px-4">
