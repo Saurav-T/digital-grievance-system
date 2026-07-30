@@ -339,6 +339,26 @@ class JobListing(models.Model):
                 media.append(entry)
         return media
 
+# ---------------------------------------------------------------------------
+# GrievanceAttachment
+# ---------------------------------------------------------------------------
+
+class GrievanceAttachment(models.Model):
+    grievance   = models.ForeignKey(Grievance, on_delete=models.CASCADE, related_name="attachments")
+    file        = models.ImageField(upload_to="grievances/attachments/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "grievance_attachments"
+        ordering = ["uploaded_at"]
+
+    def __str__(self):
+        return f"Attachment #{self.id} for grievance #{self.grievance_id}"
+
+    @property
+    def filename(self):
+        return self.file.name.rsplit("/", 1)[-1] if self.file else ""
+
 
 # ---------------------------------------------------------------------------
 # GrievanceStatusHistory
