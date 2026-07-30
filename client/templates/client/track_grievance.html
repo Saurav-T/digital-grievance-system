@@ -75,6 +75,21 @@
     transition: border-color .15s, box-shadow .15s;
   }
   .griev-modal-input:focus { border-color: #1e3a8a; box-shadow: 0 0 0 3px rgba(30,58,138,.1); }
+
+  /* ── Attachment icon in the table ─────────────────────────── */
+  .attachment-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    padding: .3rem .6rem;
+    border-radius: .4rem;
+    font-size: .75rem;
+    font-weight: 600;
+    background: #eff6ff;
+    color: #1e3a8a;
+    transition: background-color .15s;
+  }
+  .attachment-badge:hover { background: #dbeafe; }
 </style>
 {% endblock %}
 
@@ -243,9 +258,26 @@
                   {% endif %}
                 </div>
               </td>
+
+              <!-- ══ ATTACHMENT COLUMN — NEW ══ -->
+              <td onclick="event.stopPropagation()">
+                {% if grievance.attachments.count %}
+                <span class="attachment-badge" title="{{ grievance.attachments|length }} attachment{{ grievance.attachments|length|pluralize }}">
+                  <svg class="h-3.5 w-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 10-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                  </svg>
+                  {{ grievance.attachments.count }}
+                </span>
+                {% else %}
+                <span class="text-xs text-gray-300">—</span>
+                {% endif %}
+              </td>
+              <!-- ══ END ATTACHMENT COLUMN ══ -->
+
             </tr>
             {% empty %}
-            <tr><td colspan="7" class="text-center py-10 text-gray-400">No grievances found.</td></tr>
+            <tr><td colspan="8" class="text-center py-10 text-gray-400">No grievances found.</td></tr>
             {% endfor %}
           </tbody>
         </table>
