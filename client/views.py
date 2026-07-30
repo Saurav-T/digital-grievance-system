@@ -16,6 +16,7 @@ from django.views.decorators.http import require_POST
 from .models import (
     GENDER_CHOICES,
     Grievance,
+    GrievanceAttachment,
     GrievanceStatusHistory,
     JobListing,
     Notice,
@@ -412,9 +413,8 @@ def grievances(request):
         )
 
         files = request.FILES.getlist("attachments")
-        if files:
-            grievance.attachment = files[0]
-            grievance.save()
+        for f in files:
+            GrievanceAttachment.objects.create(grievance=grievance, file=f)
 
         GrievanceStatusHistory.objects.create(
             grievance=grievance,
@@ -434,7 +434,7 @@ def grievances(request):
 
 @login_required(login_url="login")
 def track_grievance(request):
-    qs = Grievance.objects.filter(user=request.user).order_by("-created_at")
+    qs = Grievance.objects.filter(user=request.user).prefetch_related("attachments").order_by("-created_at")
 
     q = request.GET.get("q", "").strip()
     status_filter = request.GET.get("filter", "")
@@ -464,15 +464,16 @@ def track_grievance(request):
 @login_required(login_url="login")
 def grievance_detail(request, pk):
     grievance = get_object_or_404(
-        Grievance.objects.select_related("user"),
+        Grievance.objects.select_related("user").prefetch_related("attachments"),
         pk=pk,
         user=request.user,
     )
     history = grievance.status_history.select_related("updated_by").order_by("updated_at")
+    attachments = grievance.attachments.all()
     return render(
         request,
         "client/grievance_detail.html",
-        {"grievance": grievance, "history": history},
+        {"grievance": grievance, "history": history, "attachments":attachments},
     )
 
 @login_required(login_url="login")
