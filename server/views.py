@@ -487,7 +487,7 @@ def grievances(request):
 
 
 def grievance_json(request, pk):
-    g = get_object_or_404(Grievance.objects.select_related("user"), pk=pk)
+    g = get_object_or_404(Grievance.objects.select_related("user").prefetch_related("attachments"), pk=pk)
     history = g.status_history.select_related("updated_by").order_by("updated_at")
     return JsonResponse({
         "id": g.id, "subject": g.subject, "description": g.description,
@@ -498,7 +498,10 @@ def grievance_json(request, pk):
         "priority": g.priority, "priority_colour": g.priority_colour,
         "status": g.status, "status_colour": g.status_colour,
         "location_url": g.location_url or "",
-        "attachment": g.attachment.url if g.attachment else "",
+        "attachments": [
+            {"url": a.file.url, "name": a.filename}
+            for a in g.attachments.all()
+        ],
         "is_spam": g.is_spam, "spam_score": round(g.spam_score, 1),
         "resolution_note": g.resolution_note or "",
         "created_at": g.created_at.strftime("%d %b %Y, %I:%M %p"),
