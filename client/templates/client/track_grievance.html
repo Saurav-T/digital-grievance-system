@@ -88,8 +88,31 @@
     background: #eff6ff;
     color: #1e3a8a;
     transition: background-color .15s;
+    border: none;
+    cursor: pointer;
   }
   .attachment-badge:hover { background: #dbeafe; }
+
+  /* ── Attachment lightbox thumbnails ─────────────────────────── */
+  .attachment-thumb-link {
+    display: block;
+    position: relative;
+    border-radius: .6rem;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .attachment-thumb-link:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 14px rgba(0,0,0,.14);
+  }
+  .attachment-thumb-link img {
+    width: 100%;
+    height: 8rem;
+    object-fit: cover;
+    display: block;
+  }
 </style>
 {% endblock %}
 
@@ -259,16 +282,21 @@
                 </div>
               </td>
 
-              <!-- ══ ATTACHMENT COLUMN — NEW ══ -->
+              <!-- ══ ATTACHMENT COLUMN — UPDATED (clickable, opens lightbox) ══ -->
               <td onclick="event.stopPropagation()">
                 {% if grievance.attachments.count %}
-                <span class="attachment-badge" title="{{ grievance.attachments|length }} attachment{{ grievance.attachments|length|pluralize }}">
+                <button type="button"
+                        class="attachment-badge"
+                        title="View {{ grievance.attachments.count }} attachment{{ grievance.attachments.count|pluralize }}"
+                        data-urls="{% for att in grievance.attachments.all %}{{ att.file.url }}{% if not forloop.last %}|||{% endif %}{% endfor %}"
+                        data-subject="{{ grievance.subject|escapejs }}"
+                        onclick="openAttachmentsModal(this.dataset.urls.split('|||'), this.dataset.subject)">
                   <svg class="h-3.5 w-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round"
                           d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 10-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
                   </svg>
                   {{ grievance.attachments.count }}
-                </span>
+                </button>
                 {% else %}
                 <span class="text-xs text-gray-300">—</span>
                 {% endif %}
@@ -376,6 +404,21 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════
+     VIEW ATTACHMENTS MODAL — NEW
+════════════════════════════════════════════════════════════ -->
+<div id="modal-view-attachments" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeGrievanceModal('modal-view-attachments')"></div>
+  <div class="relative bg-white rounded-2xl shadow-lg w-[92%] max-w-2xl mx-auto mt-16 max-h-[80vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+      <h3 class="font-semibold text-lg text-gray-900" id="attachments-modal-title">Attachments</h3>
+      <button type="button" onclick="closeGrievanceModal('modal-view-attachments')"
+              class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <div id="attachments-grid" class="p-6 grid grid-cols-2 sm:grid-cols-3 gap-4"></div>
+  </div>
+</div>
+
 <script>
 // ── Grievance modal open/close ────────────────────────────────────────
 function openGrievanceModal(id) { document.getElementById(id).classList.remove('hidden'); }
@@ -401,6 +444,29 @@ function openDeleteGrievance(id, subject) {
   document.getElementById('dg-subject-preview').textContent =
     'This will permanently delete "' + subject + '". This action cannot be undone.';
   openGrievanceModal('modal-delete-grievance');
+}
+
+// ── Attachments: render thumbnails + open lightbox modal ────────────────
+function openAttachmentsModal(urls, subject) {
+  var grid = document.getElementById('attachments-grid');
+  var titleEl = document.getElementById('attachments-modal-title');
+
+  titleEl.textContent = subject ? ('Attachments — ' + subject) : 'Attachments';
+
+  var validUrls = urls.filter(function (u) { return u && u.trim().length > 0; });
+
+  if (!validUrls.length) {
+    grid.innerHTML = '<p class="col-span-full text-sm text-gray-400 text-center py-6">No attachments to display.</p>';
+  } else {
+    grid.innerHTML = validUrls.map(function (url) {
+      return '' +
+        '<a href="' + url + '" target="_blank" rel="noopener" class="attachment-thumb-link">' +
+          '<img src="' + url + '" alt="Grievance attachment" loading="lazy">' +
+        '</a>';
+    }).join('');
+  }
+
+  openGrievanceModal('modal-view-attachments');
 }
 </script>
 {% endblock %}
