@@ -185,7 +185,7 @@
             {% if attachments %}
             <div class="gallery-scroll">
               {% for a in attachments %}
-              <button type="button" onclick="openLightbox('{{ a.image.url }}')" class="gallery-item">
+              <button type="button" onclick="openLightbox('{{ a.file.url }}')" class="gallery-item">
                 <img src="{{ a.file.url }}" alt="Grievance attachment {{ forloop.counter }}">
               </button>
               {% endfor %}
