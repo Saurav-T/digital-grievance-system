@@ -45,7 +45,7 @@
                 <tr>
                     <td class="font-mono text-xs text-gray-400">#{{ g.id }}</td>
                     <td class="whitespace-nowrap">{{ g.user.get_full_name }}</td>
-                    <td class="text-gray-500 text-xs">{{ g.category.name|default:"—" }}</td>
+                    <td class="text-gray-500 text-xs">{{ g.category_label|default:"—" }}</td>
                     <td class="max-w-xs truncate font-medium" title="{{ g.subject }}">{{ g.subject }}</td>
                     <td><span class="badge {{ g.priority_colour }}">{{ g.priority }}</span></td>
                     <td><span class="badge {{ g.status_colour }}">{{ g.status }}</span></td>
@@ -172,8 +172,8 @@
                 <div><label class="adm-label">Category</label>
                     <select name="category" id="eg-category" class="adm-input">
                         <option value="">— None —</option>
-                        {% for cat in categories %}
-                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% for value, label in categories %}
+                        <option value="{{ value }}">{{ label }}</option>
                         {% endfor %}
                     </select></div>
                 <div class="grid grid-cols-2 gap-4">
@@ -225,6 +225,18 @@
         </div>
     </div>
 </div>
+
+<!-- ── Attachments Modal ───────────────────────────── -->
+<div id="modal-view-attachments" class="modal-wrap hidden">
+    <div class="modal-backdrop" onclick="closeModal('modal-view-attachments')"></div>
+    <div class="modal-box max-w-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white rounded-t-xl z-10">
+            <h3 class="font-semibold text-lg" id="attachments-modal-title">Attachments</h3>
+            <button onclick="closeModal('modal-view-attachments')" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+        </div>
+        <div id="attachments-grid" class="p-6 grid grid-cols-2 sm:grid-cols-3 gap-4"></div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -238,13 +250,67 @@ async function loadGrievanceEdit(pk) {
     document.getElementById('eg-status').value   = d.status;
     // category select
     const sel = document.getElementById('eg-category');
-    for (let opt of sel.options) { opt.selected = opt.text === d.category; }
+    for (let opt of sel.options) { opt.selected = opt.value === d.category; }
     openModal('modal-edit-griev');
 }
 
-function viewAttachment(pk) {
-    // TODO: implement attachment view/download logic
-    console.log('Attachment clicked for grievance', pk);
+// ── Grievance detail view (subject, description, badges, attachments) ──
+async function openGrievanceView(pk) {
+    const d = await (await fetch(`/admin-panel/grievances/${pk}/json/`)).json();
+
+    let attachmentsHtml = '<p class="text-sm text-gray-400 mt-4">No attachments were submitted with this grievance.</p>';
+    if (d.attachments && d.attachments.length) {
+        attachmentsHtml = `
+            <div class="mt-4">
+                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                    Attachments (${d.attachments.length})
+                </h4>
+                <div class="flex flex-wrap gap-3">
+                    ${d.attachments.map(a => `
+                        <a href="${a.url}" target="_blank" rel="noopener"
+                           class="block w-28 h-24 rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                            <img src="${a.url}" class="w-full h-full object-cover" alt="${a.name}">
+                        </a>
+                    `).join('')}
+                </div>
+            </div>`;
+    }
+
+    document.getElementById('gv-content').innerHTML = `
+        <div class="mb-4">
+            <h2 class="text-lg font-bold text-gray-900">${d.subject}</h2>
+            <p class="text-xs text-gray-400">#${d.id} · Filed by ${d.user} (${d.user_email})</p>
+        </div>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <span class="badge ${d.category_colour}">${d.category_label}</span>
+            <span class="badge ${d.priority_colour}">Priority: ${d.priority}</span>
+            <span class="badge ${d.status_colour}">${d.status}</span>
+        </div>
+        <p class="text-sm text-gray-700 whitespace-pre-line mb-2">${d.description}</p>
+        ${d.resolution_note ? `<p class="text-sm text-gray-600 mt-3"><strong>Note:</strong> ${d.resolution_note}</p>` : ''}
+        ${attachmentsHtml}
+    `;
+    openModal('modal-view-grievance');
+}
+
+// ── Attachments modal (paperclip icon in the Actions column) ──
+async function viewAttachment(pk) {
+    const d = await (await fetch(`/admin-panel/grievances/${pk}/json/`)).json();
+    const grid = document.getElementById('attachments-grid');
+    document.getElementById('attachments-modal-title').textContent =
+        `Attachments — ${d.subject}`;
+
+    if (!d.attachments || !d.attachments.length) {
+        grid.innerHTML = '<p class="col-span-full text-sm text-gray-400 text-center py-6">No attachments to display.</p>';
+    } else {
+        grid.innerHTML = d.attachments.map(a => `
+            <a href="${a.url}" target="_blank" rel="noopener"
+               class="block rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <img src="${a.url}" alt="${a.name}" class="w-full h-32 object-cover">
+            </a>
+        `).join('');
+    }
+    openModal('modal-view-attachments');
 }
 
 // ── Client-side text search (status/priority already filtered server-side) ──
