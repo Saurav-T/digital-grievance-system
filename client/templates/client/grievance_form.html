@@ -406,7 +406,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   dropZone.addEventListener('click', function () { fileInput.click(); });
-  fileInput.addEventListener('change', function () { addFiles(fileInput.files); fileInput.value = ''; });
+  fileInput.addEventListener('change', function () { addFiles(fileInput.files); });
 
   dropZone.addEventListener('dragover', function (e) {
     e.preventDefault();
