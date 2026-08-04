@@ -126,7 +126,6 @@ async function openNoticeView(pk) {
 <div class="space-y-4">
   <h3 class="text-xl font-bold text-gray-900">${d.title}</h3>
   <p class="text-xs text-gray-400">Created by ${d.created_by} &bull; Issue date: ${d.issue_date}</p>
-  ${d.image ? `<img src="${d.image}" alt="Notice image" class="w-full max-h-56 object-cover rounded-lg border">` : ""}
   <p class="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-lg p-4">${d.description}</p>
 </div>`;
 }
