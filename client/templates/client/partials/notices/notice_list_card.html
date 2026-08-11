@@ -15,17 +15,8 @@ After DB integration, pass notice.id from your queryset.
           overflow-hidden cursor-pointer"
    data-title="{{ title|lower }}">
 
-  <!-- Blue image placeholder (swap for real notice image when available) -->
   <div class="h-20 bg-brand-blue relative overflow-hidden">
-    {% comment %}
-    TODO (DB): Uncomment when Notice model has an image field:
-    {% if notice.image %}
-      <img src="{{ notice.image.url }}" alt="{{ title }}"
-           class="w-full h-full object-cover">
-    {% else %}
-      <div class="w-full h-full bg-brand-blue"></div>
-    {% endif %}
-    {% endcomment %}
+    <div class="w-full h-full bg-brand-blue"></div>
   </div>
 
   <!-- Card body -->
