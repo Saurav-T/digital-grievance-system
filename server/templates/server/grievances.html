@@ -45,7 +45,7 @@
                 <tr>
                     <td class="font-mono text-xs text-gray-400">#{{ g.id }}</td>
                     <td class="whitespace-nowrap">{{ g.user.get_full_name }}</td>
-                    <td class="text-gray-500 text-xs">{{ g.category.name|default:"—" }}</td>
+                    <td class="text-gray-500 text-xs">{{ g.category_label }}</td>
                     <td class="max-w-xs truncate font-medium" title="{{ g.subject }}">{{ g.subject }}</td>
                     <td><span class="badge {{ g.priority_colour }}">{{ g.priority }}</span></td>
                     <td><span class="badge {{ g.status_colour }}">{{ g.status }}</span></td>
@@ -83,13 +83,33 @@
 <!-- ── View Modal ──────────────────────────────────────────── -->
 <div id="modal-view-grievance" class="modal-wrap hidden">
     <div class="modal-backdrop" onclick="closeModal('modal-view-grievance')"></div>
-    <div class="modal-box max-w-2xl">
+    <div class="modal-box max-w-3xl">
         <div class="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white rounded-t-xl z-10">
             <h3 class="font-semibold text-lg">Grievance Detail</h3>
             <button onclick="closeModal('modal-view-grievance')" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
         </div>
         <div id="gv-content" class="p-6"></div>
     </div>
+</div>
+
+<!-- ── Admin Attachment Lightbox ─────────────────────────── -->
+<div id="admin-lightbox"
+     class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/80 p-4"
+     onclick="closeAdminLightbox()">
+
+    <img id="admin-lightbox-img"
+         src=""
+         alt="Grievance attachment"
+         class="max-h-[90vh] max-w-full rounded-lg shadow-2xl object-contain"
+         onclick="event.stopPropagation()">
+
+    <button type="button"
+            onclick="closeAdminLightbox()"
+            class="absolute top-4 right-5 text-white/80 hover:text-white
+                   text-4xl leading-none transition-colors"
+            aria-label="Close image">
+        &times;
+    </button>
 </div>
 
 <!-- ── Resolve Modal ───────────────────────────────────────── -->
@@ -164,8 +184,8 @@
                 <div><label class="adm-label">Category</label>
                     <select name="category" id="eg-category" class="adm-input">
                         <option value="">— None —</option>
-                        {% for cat in categories %}
-                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% for value, label in categories %}
+                        <option value="{{ value }}">{{ label }}</option>
                         {% endfor %}
                     </select></div>
                 <div class="grid grid-cols-2 gap-4">

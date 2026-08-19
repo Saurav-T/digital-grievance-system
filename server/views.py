@@ -485,7 +485,7 @@ def grievances(request):
         category_filter=category_filter,
     ))
 
-
+@staff_required
 def grievance_json(request, pk):
     g = get_object_or_404(Grievance.objects.select_related("user"), pk=pk)
     history = g.status_history.select_related("updated_by").order_by("updated_at")
