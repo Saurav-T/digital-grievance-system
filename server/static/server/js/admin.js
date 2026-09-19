@@ -19,6 +19,8 @@ document.addEventListener("keydown", function (e) {
         document.querySelectorAll(".modal-wrap:not(.hidden)").forEach(function (m) {
             closeModal(m.id);
         });
+
+        closeAdminLightbox();
     }
 });
 
@@ -96,7 +98,26 @@ async function openGrievanceView(pk) {
     <div class="bg-gray-50 rounded-lg p-3"><p class="text-gray-400 mb-1">Spam Score</p>
       <p class="font-semibold ${d.spam_score > 50 ? 'text-red-600' : 'text-green-600'}">${d.spam_score}%</p></div>
   </div>
-  ${d.attachment ? `<img src="${d.attachment}" alt="Attachment" class="w-full max-h-56 object-cover rounded-lg border">` : ""}
+  <div>
+    <p class="text-sm font-semibold text-gray-700 mb-2">Attached Image</p>
+   ${d.attachment ? `
+    <button type="button" id="gv-attachment-btn"
+            class="group block w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm cursor-zoom-in text-left">
+      <img src="${d.attachment}" alt="Grievance attachment"
+          class="w-full max-h-80 object-cover group-hover:opacity-90 transition-opacity">
+    </button>
+    <p class="text-[11px] text-gray-400 mt-1">
+      Click image to view full size
+    </p>
+  ` : `
+      <div class="flex items-center gap-2 text-sm text-gray-400 bg-gray-50 border border-dashed border-gray-200 rounded-lg py-4 px-4">
+        <svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        No image was attached to this grievance.
+      </div>
+    `}
+  </div>
   ${d.location_url ? `<p class="text-sm"><span class="font-semibold text-gray-600">Location:</span> <a href="${d.location_url}" target="_blank" class="text-brand-blue underline break-all">${d.location_url}</a></p>` : ""}
   <div>
     <p class="text-sm font-semibold text-gray-700 mb-1">Description</p>
@@ -111,6 +132,12 @@ async function openGrievanceView(pk) {
     <div>${timelineHtml}</div>
   </div>
 </div>`;
+  const attachBtn = document.getElementById('gv-attachment-btn');
+    if (attachBtn) {
+      attachBtn.addEventListener('click', function () {
+        openAdminLightbox(d.attachment);
+      });
+    }
     } catch (err) {
         content.innerHTML = `<p class="text-red-500 text-center py-8">Failed to load details.</p>`;
     }
@@ -126,7 +153,6 @@ async function openNoticeView(pk) {
 <div class="space-y-4">
   <h3 class="text-xl font-bold text-gray-900">${d.title}</h3>
   <p class="text-xs text-gray-400">Created by ${d.created_by} &bull; Issue date: ${d.issue_date}</p>
-  ${d.image ? `<img src="${d.image}" alt="Notice image" class="w-full max-h-56 object-cover rounded-lg border">` : ""}
   <p class="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-lg p-4">${d.description}</p>
 </div>`;
 }
@@ -156,4 +182,66 @@ async function openJobView(pk) {
   <div><p class="text-sm font-semibold text-gray-700 mb-1">Contact Information</p>
     <p class="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 rounded-lg p-3">${d.contact_information}</p></div>
 </div>`;
+}
+
+/* ─── Admin grievance attachment lightbox ───────────────────── */
+
+function getOrCreateAdminLightbox() {
+    let lightbox = document.getElementById("admin-lightbox");
+    let image = document.getElementById("admin-lightbox-img");
+    if (lightbox && image) return { lightbox, image };
+
+    // Build it fresh, fully inline-styled, appended straight to <body>.
+    // No Tailwind classes, no z-index guessing games, no ancestor CSS to fight.
+    lightbox = document.createElement("div");
+    lightbox.id = "admin-lightbox";
+    lightbox.style.cssText =
+        "position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;" +
+        "display:none;align-items:center;justify-content:center;" +
+        "background:rgba(0,0,0,0.85);padding:1rem;";
+    lightbox.addEventListener("click", closeAdminLightbox);
+
+    image = document.createElement("img");
+    image.id = "admin-lightbox-img";
+    image.alt = "Grievance attachment";
+    image.style.cssText =
+        "max-height:90vh;max-width:100%;border-radius:0.5rem;" +
+        "box-shadow:0 20px 50px rgba(0,0,0,0.5);object-fit:contain;";
+    image.addEventListener("click", function (e) { e.stopPropagation(); });
+
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.innerHTML = "&times;";
+    closeBtn.setAttribute("aria-label", "Close image");
+    closeBtn.style.cssText =
+        "position:fixed;top:1rem;right:1.25rem;color:#fff;" +
+        "font-size:2.5rem;line-height:1;background:none;border:none;" +
+        "cursor:pointer;opacity:0.85;";
+    closeBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        closeAdminLightbox();
+    });
+
+    lightbox.appendChild(image);
+    lightbox.appendChild(closeBtn);
+    document.body.appendChild(lightbox);
+
+    return { lightbox, image };
+}
+
+function openAdminLightbox(url) {
+    if (!url) return;
+    const { lightbox, image } = getOrCreateAdminLightbox();
+    image.src = url;
+    lightbox.style.display = "flex";
+    document.body.style.overflow = "hidden";
+}
+
+function closeAdminLightbox() {
+    const lightbox = document.getElementById("admin-lightbox");
+    const image = document.getElementById("admin-lightbox-img");
+    if (!lightbox) return;
+    lightbox.style.display = "none";
+    if (image) image.src = "";
+    document.body.style.overflow = "";
 }

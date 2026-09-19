@@ -485,7 +485,7 @@ def grievances(request):
         category_filter=category_filter,
     ))
 
-
+@staff_required
 def grievance_json(request, pk):
     g = get_object_or_404(Grievance.objects.select_related("user").prefetch_related("attachments"), pk=pk)
     history = g.status_history.select_related("updated_by").order_by("updated_at")
@@ -585,8 +585,6 @@ def notices(request):
                     category=request.POST.get("category", "general"),
                     created_by=request.user,
                 )
-                if "image" in request.FILES:
-                    n.image = request.FILES["image"]
                 n.save()
                 notify_all_citizens(
                     "notice",
@@ -602,8 +600,6 @@ def notices(request):
                 n.title       = request.POST["title"]
                 n.description = request.POST["description"]
                 n.category    = request.POST.get("category", n.category)
-                if "image" in request.FILES:
-                    n.image = request.FILES["image"]
                 n.save()
                 messages.success(request, "Notice updated.")
 
@@ -631,7 +627,6 @@ def notice_json(request, pk):
         "category_colour": n.category_colour,
         "issue_date": n.issue_date.strftime("%Y-%m-%dT%H:%M") if n.issue_date else "",
         "issue_date_display": n.issue_date.strftime("%d %b %Y, %I:%M %p") if n.issue_date else "",
-        "image": n.image.url if n.image else "",
         "created_by": n.created_by.get_full_name() if n.created_by else "—",
     })
 
