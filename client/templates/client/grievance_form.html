@@ -194,39 +194,28 @@
             <div class="space-y-5">
               <div>
                 <label for="category" class="griev-label">Category</label>
-                <select id="category" name="category" class="griev-input">
-                  {% for value, label in category_choices %}
-                  <option value="{{ value }}" {% if value == "other" %}selected{% endif %}>{{ label }}</option>
-                  {% endfor %}
-                </select>
+                {{ form.category }}
               </div>
 
               <div>
                 <label for="subject" class="griev-label">Subject</label>
-                <input type="text" id="subject" name="subject" placeholder="A short, clear title" class="griev-input">
+                {{ form.subject }}
               </div>
 
               <div>
                 <label for="description" class="griev-label">Description</label>
-                <textarea id="description" name="description" rows="5" placeholder="Describe the issue in detail…"
-                  class="griev-input resize-y"></textarea>
+                {{ form.description }}
               </div>
 
               <div>
                 <label class="griev-label">Priority</label>
                 <div class="grid grid-cols-3 gap-2">
+                  {% for value, label in form.fields.priority.choices %}
                   <label class="priority-pill">
-                    <input type="radio" name="priority" value="low" checked>
-                    <span>Low</span>
+                   <input type="radio" name="priority" value="{{ value }}" {% if forloop.first %}checked{% endif %}>
+                   <span>{{ label }}</span>
                   </label>
-                  <label class="priority-pill">
-                    <input type="radio" name="priority" value="medium">
-                    <span>Medium</span>
-                  </label>
-                  <label class="priority-pill">
-                    <input type="radio" name="priority" value="high">
-                    <span>High</span>
-                  </label>
+                  {% endfor %}
                 </div>
               </div>
 
@@ -289,13 +278,11 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
                   <label for="coordinates" class="griev-label">Coordinates</label>
-                  <input type="text" id="coordinates" name="coordinates" class="griev-input bg-white font-mono text-xs"
-                    readonly placeholder="—">
+                  {{ form.coordinates }}
                 </div>
                 <div>
                   <label for="location" class="griev-label">Address</label>
-                  <input type="text" id="location" name="location" class="griev-input bg-white" readonly
-                    placeholder="—">
+                  {{ form.location }}
                 </div>
               </div>
               <p class="text-xs text-gray-400">Click anywhere on the map to drop a pin, or use search / current location
@@ -467,7 +454,6 @@
       dropZone.classList.remove('border-brand-blue', 'bg-blue-50');
       addFiles(e.dataTransfer.files);
     });
-
   });
 </script>
 {% endblock %}

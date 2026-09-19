@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import timedelta
-
+from .forms import GrievanceForm
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -16,6 +16,7 @@ from django.views.decorators.http import require_POST
 from .models import (
     GENDER_CHOICES,
     Grievance,
+    GrievanceAttachment,
     GrievanceStatusHistory,
     JobListing,
     Notice,
@@ -380,61 +381,52 @@ def update_notification_setting(request):
 
 
 # =============================================================================
-# Grievances (create + track, DB-backed)
+# Grievances
 # =============================================================================
 
 @login_required(login_url="login")
 def grievances(request):
     if request.method == "POST":
-        subject = request.POST.get("subject", "").strip()
-        description = request.POST.get("description", "").strip()
-        priority_raw = request.POST.get("priority", "medium").capitalize()
-        category_raw = request.POST.get("category", "other").strip()
-        coordinates = request.POST.get("coordinates", "").strip()
+        form = GrievanceForm(request.POST, request.FILES)
+        if form.is_valid():
+            grievance = Grievance.objects.create(
+                user=request.user,
+                category=form.cleaned_data["category"],
+                subject=form.cleaned_data["subject"],
+                description=form.cleaned_data["description"],
+                priority=form.cleaned_data["priority"],
+                location_url=form.cleaned_data["coordinates"] or None,
+            )
 
-        if not subject or not description:
-            messages.error(request, "Please provide both a subject and a description.")
-            return redirect("grievances")
+            for f in form.cleaned_data.get("attachments") or []:
+                GrievanceAttachment.objects.create(grievance=grievance, file=f)
 
-        valid_priorities = dict(Grievance.PRIORITY_CHOICES)
-        priority = priority_raw if priority_raw in valid_priorities else "Medium"
+            GrievanceStatusHistory.objects.create(
+                grievance=grievance,
+                status="Pending",
+                remarks="Submitted by citizen.",
+                updated_by=request.user,
+            )
+            notify_grievance_status(grievance, "Pending")
 
-        valid_categories = dict(Grievance.CATEGORY_CHOICES)
-        category = category_raw if category_raw in valid_categories else "other"
-
-        grievance = Grievance.objects.create(
-            user=request.user,
-            category=category,
-            subject=subject,
-            description=description,
-            priority=priority,
-            location_url=coordinates or None,
-        )
-
-        files = request.FILES.getlist("attachments")
-        if files:
-            grievance.attachment = files[0]
-            grievance.save()
-
-        GrievanceStatusHistory.objects.create(
-            grievance=grievance,
-            status="Pending",
-            remarks="Submitted by citizen.",
-            updated_by=request.user,
-        )
-        notify_grievance_status(grievance, "Pending")
-
-        messages.success(request, "Your grievance has been submitted successfully.")
-        return redirect("track_grievance")
+            messages.success(request, "Your grievance has been submitted successfully.")
+            return redirect("track_grievance")
+        else:
+            for field_errors in form.errors.values():
+                for error in field_errors:
+                    messages.error(request, error)
+    else:
+        form = GrievanceForm()
 
     return render(request, "client/grievance_form.html", {
+        "form": form,
         "category_choices": Grievance.CATEGORY_CHOICES,
     })
 
 
 @login_required(login_url="login")
 def track_grievance(request):
-    qs = Grievance.objects.filter(user=request.user).order_by("-created_at")
+    qs = Grievance.objects.filter(user=request.user).prefetch_related("attachments").order_by("-created_at")
 
     q = request.GET.get("q", "").strip()
     status_filter = request.GET.get("filter", "")
@@ -464,15 +456,16 @@ def track_grievance(request):
 @login_required(login_url="login")
 def grievance_detail(request, pk):
     grievance = get_object_or_404(
-        Grievance.objects.select_related("user"),
+        Grievance.objects.select_related("user").prefetch_related("attachments"),
         pk=pk,
         user=request.user,
     )
     history = grievance.status_history.select_related("updated_by").order_by("updated_at")
+    attachments = grievance.attachments.all()
     return render(
         request,
         "client/grievance_detail.html",
-        {"grievance": grievance, "history": history},
+        {"grievance": grievance, "history": history, "attachments":attachments},
     )
 
 @login_required(login_url="login")
