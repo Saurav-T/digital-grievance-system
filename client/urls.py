@@ -34,6 +34,7 @@ urlpatterns = [
     path("profile/", views.profile, name="profile"),
     path("profile/update/", views.update_profile, name="update_profile"),
     path("account/delete/", views.delete_account, name="delete_account"),
+    path("account/change-password/", views.change_password, name="change_password"),
     path("notifications/", views.notifications, name="notifications"),
 
     # ── AJAX / API endpoints ─────────────────────────────────
