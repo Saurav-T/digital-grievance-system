@@ -1,9 +1,9 @@
 import json
 import re
-from datetime import timedelta
+from datetime import timedelta, date, datetime
 from .forms import GrievanceForm
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth
@@ -139,13 +139,28 @@ def signup_view(request):
             errors.append("Passwords do not match.")
 
         if not phone:
-            errors.append("Phone number is required.")
+            errors.append("Phone number is required")
+
+        parsed_dob = None
         if not dob:
-            errors.append("Date of birth is required.")
+            errors.append("Date of birth is required")
+        else:
+            try:
+                parsed_dob = datetime.strptime(dob, "%Y-%m-%d").date()
+            except ValueError:
+                errors.append("Please enter a valid date of birth.")
+            else:
+                if parsed_dob > date.today():
+                    errors.append("Date of birth cannot be in the future.")
+                else:
+                    min_age_date = date.today().replace(year=date.today().year - 13)
+                    if parsed_dob > min_age_date:
+                        errors.append("you must be 13 years old to register.")
+
         if not address:
-            errors.append("Address is required.")
+            errors.append("address is required.")
         if not municipality:
-            errors.append("Municipality / City is required.")
+            errors.append("Municipality / city is required.")                
 
         if errors:
             for e in errors:
@@ -163,7 +178,7 @@ def signup_view(request):
             last_name=last_name,
             username=username,
             phone_number=phone,
-            dob=dob,
+            dob=parsed_dob,
             gender=gender,
             address=address,
             municipality=municipality,
@@ -936,7 +951,7 @@ def update_profile(request):
     username    = request.POST.get("username", "").strip()
     email       = request.POST.get("email", "").strip().lower()
     phone       = request.POST.get("phone_number", "").strip()
-    dob         = request.POST.get("dob") or None
+    dob_raw     = request.POST.get("dob") or None
     gender      = request.POST.get("gender", "")
     address     = request.POST.get("address", "").strip()
     municipality = request.POST.get("municipality", "").strip()
@@ -963,6 +978,21 @@ def update_profile(request):
     elif User.objects.filter(phone_number=phone).exclude(pk=user.pk).exists():
         errors.append("That phone number is already registered to another account.")
 
+    parsed_dob = user.dob
+    if dob_raw:
+        try:
+            parsed_dob = datetime.strptime(dob_raw, "%Y-%m-%d").date()
+        except ValueError:
+            errors.append("Please enter a valid date of birth.")
+        else:
+            if parsed_dob > date.today():
+                errors.append("Date of birth cannot be in the future.")
+            else:
+                 min_age_date = date.today().replace(year=date.today().year - 13)
+                 if parsed_dob > min_age_date:
+                     errors.append("You must be at least 13 years old.")
+
+
     if not address:
         errors.append("Address is required.")
     if not municipality:
@@ -983,13 +1013,85 @@ def update_profile(request):
         user.username = username
     user.email = email
     user.phone_number = phone
-    user.dob = dob
+    user.dob = parsed_dob
     user.gender = gender
     user.address = address
     user.municipality = municipality
     user.save()
 
     messages.success(request, "Profile updated successfully.")
+    return redirect("profile")
+
+@login_required(login_url="login")
+@require_POST
+def delete_account(request):
+    """Permanently deletes the logged-in user's account after password confirmation."""
+    user = request.user
+    password = request.POST.get("password", "")
+
+    if not password:
+        messages.error(request, "Please enter your password to confirm account deletion.")
+        return redirect("profile")
+
+    # Re-authenticate to make sure it's really the account owner acting,
+    # not e.g. a hijacked session or a stray CSRF-protected request.
+    check_user = authenticate(request, username=user.email, password=password)
+    if check_user is None:
+        messages.error(request, "Incorrect password. Your account was not deleted.")
+        return redirect("profile")
+
+    # Clean up the uploaded avatar file so we don't leak storage.
+    if user.profile_picture:
+        try:
+            user.profile_picture.delete(save=False)
+        except Exception:
+            pass
+
+    logout(request)       # end the session BEFORE deleting the row
+    check_user.delete()   # cascades to related objects per your model's on_delete rules
+
+    messages.success(request, "Your account has been permanently deleted.")
+    return redirect("login")
+
+@login_required(login_url="login")
+@require_POST
+def change_password(request):
+    """Handles the 'Change Password' modal submission."""
+    user = request.user
+
+    current_password = request.POST.get("current_password", "")
+    new_password      = request.POST.get("new_password", "")
+    new_password2     = request.POST.get("new_password2", "")
+
+    if not current_password:
+        messages.error(request, "Please enter your current password.")
+        return redirect("profile")
+
+    if authenticate(request, username=user.email, password=current_password) is None:
+        messages.error(request, "Your current password is incorrect.")
+        return redirect("profile")
+
+    if len(new_password) < 8:
+        messages.error(request, "New password must be at least 8 characters.")
+        return redirect("profile")
+
+    if new_password != new_password2:
+        messages.error(request, "New passwords do not match.")
+        return redirect("profile")
+
+    if new_password == current_password:
+        messages.error(request, "New password must be different from your current password.")
+        return redirect("profile")
+
+    user.set_password(new_password)
+    user.save()
+
+    # Without this, changing the password invalidates the current session's
+    # auth hash and Django silently logs the user out on the very next request —
+    # this keeps them logged in with the new password already in effect.
+    update_session_auth_hash(request, user)
+
+    messages.success(request, "Your password has been changed successfully.")
     return redirect("profile")
 
 
