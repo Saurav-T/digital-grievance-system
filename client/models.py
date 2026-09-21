@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
-from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 
 # ---------------------------------------------------------------------------
 # Custom User
