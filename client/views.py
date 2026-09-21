@@ -3,7 +3,7 @@ import re
 from datetime import timedelta, date, datetime
 from .forms import GrievanceForm
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth
@@ -1052,6 +1052,47 @@ def delete_account(request):
 
     messages.success(request, "Your account has been permanently deleted.")
     return redirect("login")
+
+@login_required(login_url="login")
+@require_POST
+def change_password(request):
+    """Handles the 'Change Password' modal submission."""
+    user = request.user
+
+    current_password = request.POST.get("current_password", "")
+    new_password      = request.POST.get("new_password", "")
+    new_password2     = request.POST.get("new_password2", "")
+
+    if not current_password:
+        messages.error(request, "Please enter your current password.")
+        return redirect("profile")
+
+    if authenticate(request, username=user.email, password=current_password) is None:
+        messages.error(request, "Your current password is incorrect.")
+        return redirect("profile")
+
+    if len(new_password) < 8:
+        messages.error(request, "New password must be at least 8 characters.")
+        return redirect("profile")
+
+    if new_password != new_password2:
+        messages.error(request, "New passwords do not match.")
+        return redirect("profile")
+
+    if new_password == current_password:
+        messages.error(request, "New password must be different from your current password.")
+        return redirect("profile")
+
+    user.set_password(new_password)
+    user.save()
+
+    # Without this, changing the password invalidates the current session's
+    # auth hash and Django silently logs the user out on the very next request —
+    # this keeps them logged in with the new password already in effect.
+    update_session_auth_hash(request, user)
+
+    messages.success(request, "Your password has been changed successfully.")
+    return redirect("profile")
 
 
 @login_required(login_url="login")
